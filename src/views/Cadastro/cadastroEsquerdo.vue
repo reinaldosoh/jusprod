@@ -113,73 +113,51 @@ async function verificarOABDuplicada(index) {
 
 // Verificar se email já existe no banco
 async function verificarEmailDuplicado() {
-  console.log('🔍 Verificando email duplicado:', email.value);
-  
   // Só verifica se o email está preenchido e é válido
   if (!email.value || !email.value.includes('@')) {
-    console.log('❌ Email inválido ou vazio, não verificando');
     return;
   }
-  
-  console.log('✅ Email válido, verificando no banco...');
   
   try {
     const existe = await verificarEmailExisteNoBanco(email.value);
     
-    console.log('📊 Resultado da verificação de email:', existe);
-    
     // SÓ MOSTRA O ALERTA SE ENCONTRAR O EMAIL NO BANCO
     if (existe) {
-      console.log('⚠️ Email encontrado no banco, mostrando alerta');
       emailVerificando.value = email.value;
       mostrarAlertaEmail.value = true;
-    } else {
-      console.log('✅ Email não encontrado no banco, pode usar');
     }
     
   } catch (error) {
-    console.error('❌ Erro ao verificar email:', error);
+    console.error('Erro ao verificar email:', error);
   }
 }
 
 // Verificar se CPF já existe no banco
 async function verificarCPFDuplicado() {
-  console.log('🔍 Verificando CPF duplicado:', cpf.value);
-  
   // Só verifica se o CPF está preenchido
   if (!cpf.value) {
-    console.log('❌ CPF vazio, não verificando');
     return;
   }
   
   // Limpar CPF (remover caracteres não numéricos)
   const cpfLimpo = cpf.value.replace(/\D/g, '');
-  console.log('🧹 CPF limpo:', cpfLimpo, 'Tamanho:', cpfLimpo.length);
   
   // Só verifica se o CPF tem 11 dígitos
   if (cpfLimpo.length !== 11) {
-    console.log('❌ CPF não tem 11 dígitos, não verificando');
     return;
   }
-  
-  console.log('✅ CPF válido, verificando no banco...');
   
   try {
     const existe = await verificarCPFExisteNoBanco(cpfLimpo);
     
-    console.log('📊 Resultado da verificação de CPF:', existe);
-    
     // SÓ MOSTRA O ALERTA SE ENCONTRAR O CPF NO BANCO
     if (existe) {
-      console.log('⚠️ CPF encontrado no banco, mostrando alerta');
       cpfVerificando.value = cpfLimpo;
       mostrarAlertaCPF.value = true;
-    } else {
-      console.log('✅ CPF não encontrado no banco, pode usar');
     }
     
   } catch (error) {
-    console.error('❌ Erro ao verificar CPF:', error);
+    console.error('Erro ao verificar CPF:', error);
   }
 }
 
@@ -466,12 +444,8 @@ async function verificarOABExisteNoBanco(numero, uf) {
 
 // Verificar se email existe no banco (função auxiliar)
 async function verificarEmailExisteNoBanco(email) {
-  console.log('🔗 Consultando banco para email:', email);
-  
   try {
     const { supabase } = await import('../../lib/supabase.js');
-    
-    console.log('📡 Fazendo consulta no Supabase...');
     
     const { data, error } = await supabase
       .from('usuario')
@@ -484,12 +458,7 @@ async function verificarEmailExisteNoBanco(email) {
       throw error;
     }
     
-    console.log('📋 Dados retornados:', data);
-    console.log('📊 Quantidade de registros:', data ? data.length : 0);
-    
     const existe = data && data.length > 0;
-    console.log('🎯 Email existe no banco:', existe);
-    
     return existe;
     
   } catch (error) {
@@ -500,12 +469,8 @@ async function verificarEmailExisteNoBanco(email) {
 
 // Verificar se CPF existe no banco (função auxiliar)
 async function verificarCPFExisteNoBanco(cpf) {
-  console.log('🔗 Consultando banco para CPF:', cpf);
-  
   try {
     const { supabase } = await import('../../lib/supabase.js');
-    
-    console.log('📡 Fazendo consulta no Supabase...');
     
     const { data, error } = await supabase
       .from('usuario')
@@ -518,12 +483,7 @@ async function verificarCPFExisteNoBanco(cpf) {
       throw error;
     }
     
-    console.log('📋 Dados retornados:', data);
-    console.log('📊 Quantidade de registros:', data ? data.length : 0);
-    
     const existe = data && data.length > 0;
-    console.log('🎯 CPF existe no banco:', existe);
-    
     return existe;
     
   } catch (error) {
@@ -684,11 +644,6 @@ function atualizarTelefone(valor) {
 function fecharAlertaErro() {
   mostrarErro.value = false;
 }
-
-// Função de teste para blur
-function testeBlur(campo) {
-  console.log('🧪 TESTE BLUR funcionando para:', campo);
-}
 </script>
 
 <template>
@@ -805,7 +760,7 @@ function testeBlur(campo) {
             type="email"
             placeholder="Insira seu e-mail"
             v-model="email"
-            @blur="() => { testeBlur('email'); verificarEmailDuplicado(); }"
+            @blur="verificarEmailDuplicado"
           />
         </div>
         
@@ -831,7 +786,7 @@ function testeBlur(campo) {
             placeholder="000.000.000-00"
             v-model="cpf"
             @update:modelValue="atualizarCPF"
-            @blur="() => { testeBlur('cpf'); verificarCPFDuplicado(); }"
+            @blur="verificarCPFDuplicado"
             maxlength="14"
           >
             <template #icon>
