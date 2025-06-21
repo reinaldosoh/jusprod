@@ -40,6 +40,9 @@ const oabVerificando = ref({ numero: '', uf: '' });
 const emailVerificando = ref('');
 const cpfVerificando = ref('');
 
+// Estado para aceite dos termos
+const aceitouTermos = ref(false);
+
 // Lista de UFs brasileiras
 const listaUFs = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 
@@ -538,6 +541,20 @@ const temLetraMaiuscula = computed(() => /[A-Z]/.test(senha.value));
 const temCaractereEspecial = computed(() => /[^\w\s]/.test(senha.value));
 const senhasSaoIguais = computed(() => senha.value && senha.value === confirmarSenha.value);
 
+// Validação completa da senha
+const senhaValida = computed(() => {
+  return temMinimo6Caracteres.value && 
+         temNumero.value && 
+         temLetraMaiuscula.value && 
+         temCaractereEspecial.value && 
+         senhasSaoIguais.value;
+});
+
+// Validação para habilitar o botão de concluir
+const podeFinalizarCadastro = computed(() => {
+  return senhaValida.value && aceitouTermos.value && !isLoading.value;
+});
+
 // Voltar para etapa anterior
 function etapaAnterior() {
   if (etapaAtual.value > 1) {
@@ -906,7 +923,12 @@ function fecharAlertaErro() {
         
         <div class="termos-container">
           <div class="custom-checkbox">
-            <input type="checkbox" id="aceite-termos" class="checkbox-input" />
+            <input 
+              type="checkbox" 
+              id="aceite-termos" 
+              class="checkbox-input" 
+              v-model="aceitouTermos"
+            />
             <span class="checkbox-custom"></span>
           </div>
           <label for="aceite-termos" class="checkbox-label">
@@ -929,8 +951,17 @@ function fecharAlertaErro() {
             :label="isLoading ? 'Processando...' : 'Concluir'" 
             @click="concluirCadastro"
             class="btn-concluir"
-            :disabled="isLoading"
+            :disabled="!podeFinalizarCadastro"
           />
+        </div>
+        
+        <!-- Mensagem sobre requisitos para habilitar o botão -->
+        <div v-if="!podeFinalizarCadastro && !isLoading" class="requisitos-finalizacao">
+          <p class="texto-requisitos">
+            Para concluir o cadastro:
+            <span v-if="!senhaValida" class="requisito-pendente">✓ Complete todos os requisitos de senha</span>
+            <span v-if="!aceitouTermos" class="requisito-pendente">✓ Aceite os termos de uso</span>
+          </p>
         </div>
         
         <p class="campos-obrigatorios">* São campos obrigatórios</p>
@@ -955,8 +986,6 @@ function fecharAlertaErro() {
   overflow-y: auto;
 }
 
-
-
 .logo-container {
   display: flex;
   justify-content: flex-start;
@@ -975,8 +1004,6 @@ function fecharAlertaErro() {
   flex-direction: column;
   max-width: 500px;
 }
-
-
 
 .header-container {
   display: flex;
@@ -1310,6 +1337,26 @@ function fecharAlertaErro() {
 
 .link-termos:hover {
   text-decoration: underline;
+}
+
+.requisitos-finalizacao {
+  margin-top: 16px;
+  text-align: left;
+}
+
+.texto-requisitos {
+  font-size: 14px;
+  color: #667085;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.requisito-pendente {
+  color: #D92D20;
+  font-size: 13px;
+  margin-left: 8px;
 }
 
 @media (max-width: 768px) {
