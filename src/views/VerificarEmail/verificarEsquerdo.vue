@@ -67,8 +67,11 @@ async function validarCodigo() {
       }
     })
     
+    console.log('📥 Resposta da Edge Function:', { data, error })
+    
     if (error) {
       console.error('❌ Erro na Edge Function:', error)
+      console.error('❌ Detalhes do erro:', error.context || error.details || error)
       throw new Error(error.message || 'Erro ao validar código')
     }
     
@@ -84,8 +87,30 @@ async function validarCodigo() {
     
   } catch (error) {
     console.error('❌ Erro ao validar código:', error)
+    console.error('❌ Tipo do erro:', typeof error)
+    console.error('❌ Error stack:', error.stack)
+    console.error('❌ Error name:', error.name)
+    console.error('❌ Error message:', error.message)
+    
     errorTitulo.value = 'Código inválido'
-    errorMessage.value = error.message || 'O código informado não confere. Verifique e tente novamente.'
+    
+    // Mapear erros específicos
+    if (error.message) {
+      if (error.message.includes('expirado')) {
+        errorMessage.value = 'Código expirado. Solicite um novo código.'
+      } else if (error.message.includes('incorreto')) {
+        errorMessage.value = 'Código incorreto. Verifique e tente novamente.'
+      } else if (error.message.includes('não encontrado')) {
+        errorMessage.value = 'Usuário não encontrado.'
+      } else if (error.message.includes('non-2xx status code')) {
+        errorMessage.value = 'Erro no servidor. Tente novamente.'
+      } else {
+        errorMessage.value = error.message
+      }
+    } else {
+      errorMessage.value = 'O código informado não confere. Verifique e tente novamente.'
+    }
+    
     mostrarErro.value = true
   } finally {
     isLoading.value = false
@@ -126,6 +151,14 @@ async function reenviarCodigo() {
     // Limpar formulário
     codigo.value = ''
     codigoArray.value = ['', '', '', '', '', '']
+    
+    // Limpar os inputs visuais também
+    for (let i = 0; i < 6; i++) {
+      if (codigoRefs.value[i]) {
+        codigoRefs.value[i].value = ''
+      }
+    }
+    
     iniciarCountdown()
     
   } catch (error) {
@@ -148,16 +181,21 @@ function handleDigitoInput(index, event) {
   // Apenas números
   const numerico = valor.replace(/\D/g, '')
   
-  if (numerico.length <= 1) {
+  // Permitir apenas 1 dígito por campo
+  if (numerico.length > 1) {
+    event.target.value = numerico.slice(-1) // Pega apenas o último dígito
+    codigoArray.value[index] = numerico.slice(-1)
+  } else {
+    event.target.value = numerico
     codigoArray.value[index] = numerico
-    
-    // Atualizar código completo
-    codigo.value = codigoArray.value.join('')
-    
-    // Mover para próximo input se digitou algo
-    if (numerico && index < 5) {
-      codigoRefs.value[index + 1]?.focus()
-    }
+  }
+  
+  // Atualizar código completo
+  codigo.value = codigoArray.value.join('')
+  
+  // Mover para próximo input se digitou algo
+  if (numerico && index < 5) {
+    codigoRefs.value[index + 1]?.focus()
   }
 }
 
@@ -184,6 +222,10 @@ function handlePaste(event) {
   // Preencher os inputs
   for (let i = 0; i < 6; i++) {
     codigoArray.value[i] = numerico[i] || ''
+    // Atualizar o valor visual do input também
+    if (codigoRefs.value[i]) {
+      codigoRefs.value[i].value = numerico[i] || ''
+    }
   }
   
   codigo.value = numerico
@@ -470,6 +512,7 @@ onUnmounted(() => {
   font-size: 1.25rem;
   font-weight: 600;
   background: white;
+  color: #101828;
   transition: all 0.2s ease;
   font-family: 'Inter', sans-serif;
 }

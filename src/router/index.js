@@ -40,6 +40,12 @@ const routes = [
     component: () => import('../views/VerificarEmail/VerificarEmail.vue'),
     meta: { requiresAuth: false }
   },
+  {
+    path: '/onboarding',
+    name: 'onboarding',
+    component: () => import('../views/Onboarding/Onboarding.vue'),
+    meta: { requiresAuth: true }
+  },
   // Rota de fallback para páginas não encontradas
   {
     path: '/:pathMatch(.*)*',
