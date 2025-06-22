@@ -41,6 +41,73 @@
             {{ paragraph }}
           </p>
         </div>
+        
+        <!-- Botões para mobile - SEMPRE VISÍVEIS -->
+        <div class="mobile-actions">
+          <div class="mobile-action-buttons">
+            <!-- Dashboard (currentTab = 0) -->
+            <button 
+              v-show="currentTab === 0"
+              class="mobile-btn btn-proximo" 
+              @click="nextTab"
+            >
+              Próximo
+            </button>
+            
+            <!-- Intimações (currentTab = 1) -->
+            <button 
+              v-show="currentTab === 1"
+              class="mobile-btn btn-voltar" 
+              @click="previousTab"
+            >
+              Voltar
+            </button>
+            <button 
+              v-show="currentTab === 1"
+              class="mobile-btn btn-proximo" 
+              @click="nextTab"
+            >
+              Próximo
+            </button>
+            
+            <!-- Outras tabs (2-7) -->
+            <button 
+              v-show="currentTab >= 2 && currentTab <= 7"
+              class="mobile-btn btn-voltar" 
+              @click="previousTab"
+            >
+              Voltar
+            </button>
+            <button 
+              v-show="currentTab >= 2 && currentTab <= 7"
+              class="mobile-btn btn-proximo" 
+              @click="nextTab"
+            >
+              Próximo
+            </button>
+            
+            <!-- Última tela (currentTab = 8) -->
+            <button 
+              v-show="currentTab === 8"
+              class="mobile-btn btn-voltar" 
+              @click="previousTab"
+            >
+              Voltar
+            </button>
+            <button 
+              v-show="currentTab === 8"
+              class="mobile-btn btn-encerrar" 
+              @click="finishOnboarding"
+            >
+              Encerrar
+            </button>
+          </div>
+          
+          <!-- Pular tutorial - SEMPRE VISÍVEL -->
+          <button class="mobile-skip" @click="finishOnboarding">
+            Pular tutorial
+          </button>
+        </div>
       </div>
 
       <!-- Right Content -->
@@ -84,12 +151,36 @@
         </div>
       </div>
     </div>
+    
+    <!-- Sidebar mobile com ícones -->
+    <div class="mobile-sidebar">
+      <div 
+        v-for="(tab, index) in tabs" 
+        :key="index"
+        class="mobile-icon"
+        :class="{ active: currentTab === index }"
+        @click="navigateToTab(index)"
+      >
+        <component :is="getTabIcon(index)" :size="20" />
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { 
+  BarChart3, 
+  AlertTriangle, 
+  Users, 
+  FileText, 
+  Scale, 
+  ClipboardList, 
+  Calendar, 
+  DollarSign, 
+  HelpCircle 
+} from 'lucide-vue-next'
 
 const router = useRouter()
 const currentTab = ref(0)
@@ -99,7 +190,9 @@ const tabs = [
     name: 'Dashboard',
     title: 'Visualização centralizada e fácil',
     content: [
-      'No cenário jurídico acelerado de hoje, manter-se à frente requer mais do que apenas conhecimento jurídico; exige uma gestão eficiente de informações e dados. Uma ferramenta poderosa que tem ganhado destaque em diversos setores, inclusive no jurídico, é o dashboard. Nesta tela você tem um resumo otimizado de tudo o que está acontecendo de importante no seu escritório em um único painel. Esse painel otimizado é fundamental na prática jurídica e auxilia os advogados e advogadas na tomada de decisão informada, agiliza operações e melhora o atendimento ao cliente. Desta tela principal você visualizar de forma rápida e fácil tudo o que requer a sua atenção imediata e navegar por todas as funcionalidades da plataforma Juscerto.'
+      'Manter-se à frente em um ambiente jurídico acelerado requer gerenciamento eficiente de informações e dados. Uma ferramenta poderosa que ganhou destaque em vários setores, incluindo o jurídico, é o dashboard.',
+      'Um dashboard oferece um resumo otimizado dos acontecimentos importantes em um escritório de advocacia. A importância deste painel otimizado na prática jurídica não pode ser subestimada, pois auxilia os advogados na tomada de decisões informadas, agiliza as operações e melhora o atendimento ao cliente.',
+      'A tela principal permite visualizar de forma rápida e fácil tudo que precisa de atenção imediata e navegar por todas as funcionalidades da plataforma Jusprod.'
     ],
     image: '/images/onDashboard.png',
     badge: null
@@ -108,7 +201,8 @@ const tabs = [
     name: 'Intimações',
     title: 'Intimações e alertas',
     content: [
-      'Nós monitoramos todos os processos associados à sua OAB de maneira automática e verificamos diariamente as atualizações e novas intimações para você não perder nada relevante dos seus processos. Receba todas as novas intimações dos andamentos dos seus processos e crie agendamentos e alertas personalizados dos seus compromissos com um clique. Com as integrações entre as intimações, calendário e lembretes a Juscerto te ajuda a não esquecer de nada pra você estar sempre em dia com as tarefas do seu escritório.'
+      'O serviço monitora automaticamente todos os processos associados à sua OAB e verifica diariamente as atualizações e novas intimações para garantir que você não perca nenhuma informação relevante sobre seus processos.',
+      'Você pode receber novas intimações sobre o andamento de seus processos e criar cronogramas e alertas personalizados para seus compromissos com um único clique. A integração entre intimações, calendário e lembretes indica que o serviço (Jusprod) ajuda os usuários a se manterem organizados e não esquecerem de nenhuma tarefa relacionada ao trabalho do escritório.'
     ],
     image: '/images/onIntimacoes.png',
     badge: '12'
@@ -118,38 +212,38 @@ const tabs = [
     title: 'Gestão de clientes',
     content: [
       'O sucesso do seu escritório depende de uma gestão eficiente dos seus clientes.',
-      'Além da experiência jurídica, cultivar relacionamentos sólidos com os clientes é a base para alavancar os seus negócios. Nós da Juscerto pensamos nisso e colocamos a gestão dos seus clientes na palma da sua mão. Envie mensagens e relatórios personalizados. Programe o envio de notificações e mande mensagens em grupo para os seus clientes. Estreite o relacionamentos e mantenha seus clientes sempre bem informados com as automações da Juscerto.',
-      'A importância da gestão de clientes não está apenas nos benefícios imediatos que traz, mas no efeito cascata que cria, moldando a reputação de um(a) advogado(a), fomentando a repetição de negócios e impulsionando sua carreira para novos horizontes.'
+      'Além da experiência jurídica, cultivar relacionamentos sólidos com os clientes é a base para alavancar os seus negócios. Nós da Jusprod pensamos nisso e colocamos a gestão dos seus clientes na palma da sua mão. Envie mensagens e relatórios personalizados. Programe o envio de notificações e mande mensagens em grupo para os seus clientes. Estreite o relacionamentos e mantenha seus clientes sempre bem informados com as automações da Jusprod.',
+      'A importância da gestão de clientes não está apenas nos benefícios imediatos que traz, mas no efeito cascata que cria, moldando a reputação de um(a) advogado(a), fomentando novos negócios e impulsionando sua carreira para novos horizontes.'
     ],
     image: '/images/onClientes.png',
     badge: null
   },
   {
     name: 'Documentos',
-    title: 'Documentos e relatórios',
+    title: 'Documentos',
     content: [
       'O gerenciamento eficiente de documentos e relatórios é fundamental para você estar um passo a frente da sua concorrência.',
-      'Crie, duplique, edite, organize e compartilhe seus documentos de forma eficiente nestas telas. Gere relatórios para seus clientes de forma automática e programe os envios periódicos. Crie documentos jurídicos de maneira automática que irão agilizar e facilitar o seu dia-a-dia.'
+      'Crie, duplique, edite, organize e compartilhe seus documentos de forma eficiente nestas telas. Gere relatórios para seus clientes de forma automática e programe os envios periódicos. Crie documentos jurídicos de forma automática com nossos modelos e programe os envios.'
     ],
     image: '/images/onDoc.png',
     badge: null
   },
   {
     name: 'Processos',
-    title: 'Processos',
+    title: 'Segurança e praticidade',
     content: [
-      'Gerencie todos os seus processos de forma centralizada e eficiente.',
-      'Acompanhe o andamento dos processos, visualize intimações e mantenha tudo organizado em um só lugar.'
+      'Navegar pelo cenário jurídico pode ser complexo, especialmente quando se trata de acompanhar ações judiciais em nome de outra pessoa. Nossa plataforma foi projetada para simplificar esse processo, facilitando para os usuários se manterem informados sobre processos e ações judiciais associadas à sua OAB.',
+      'Você pode encontrar todas as informações sobre seus processos e gerenciá-los de forma prática e segura.'
     ],
     image: '/images/onProcessos.png',
     badge: null
   },
   {
     name: 'Relatórios',
-    title: 'Documentos e relatórios',
+    title: 'Relatórios',
     content: [
-      'O gerenciamento eficiente de documentos e relatórios é fundamental para você estar um passo a frente da sua concorrência.',
-      'Crie, duplique, edite, organize e compartilhe seus documentos de forma eficiente nestas telas. Gere relatórios para seus clientes de forma automática e programe os envios periódicos. Crie documentos jurídicos de maneira automática que irão agilizar e facilitar o seu dia-a-dia.'
+      'A gestão eficiente de relatórios e documentos é essencial nas atividades jurídicas. Essa gestão é fundamental para o bom funcionamento de um escritório de advocacia e sua relação com os clientes.',
+      'Gere relatórios para seus clientes de forma automática com os modelos fornecidos e programe os envios periódicos. Crie documentos jurídicos de forma automatizada para agilizar e facilitar as operações do dia a dia.'
     ],
     image: '/images/onDoc.png',
     badge: null
@@ -158,8 +252,9 @@ const tabs = [
     name: 'Minha agenda',
     title: 'Gestão inteligente do tempo',
     content: [
-      'Nós somos advogados e sabemos que prazo é tudo na advocacia! Gerencie sua agenda de forma simples e eficiente com a agenda inteligente Juscerto. Aqui você pode adicionar compromissos, categorizar seus eventos e programar lembretes para não perder nada! No mundo dinâmico do direito, onde os prazos são constantes e as demandas são altas, o gerenciamento eficiente do tempo não é apenas uma habilidade; é uma vantagem estratégica.',
-      'Explore as funcionalidades do calendário inteligente Juscerto, organize sua rotina e libere mais tempo para evoluir o seu negócio e atender os seus clientes.'
+      'Nós somos advogados e sabemos que prazo é tudo na advocacia! Gerencie sua agenda de forma simples e eficiente com a agenda inteligente Jusprod.',
+      'Aqui você pode adicionar compromissos, categorizar seus eventos e programar lembretes para não perder nada! No mundo dinâmico do Direito, onde os prazos são constantes e as demandas são altas, o gerenciamento eficiente do tempo não é apenas uma habilidade, é uma vantagem estratégica.',
+      'Explore as funcionalidades do calendário inteligente Jusprod, organize sua rotina e libere mais tempo para evoluir o seu negócio e atender os seus clientes.'
     ],
     image: '/images/onAgenda.png',
     badge: null
@@ -169,7 +264,7 @@ const tabs = [
     title: 'Controle financeiro',
     content: [
       'Gerenciar as finanças do seu escritório nunca foi tão fácil!',
-      'Com a plataforma Juscerto você tem o controle e a gestão de todos os gastos e recebíveis do seu negócio. É fácil de atualizar, criar recorrências para gastos e receitas periódicas e de visualizar.',
+      'Com a plataforma Jusprod você tem o controle e a gestão de todos os gastos e recebíveis do seu negócio. É fácil de atualizar, visualizar e criar recorrências para gastos e receitas periódicas.',
       'Tenha total visão da saúde financeira do seu escritório e auxílio na tomada de decisão estratégica baseada em dados.'
     ],
     image: '/images/onFinanceiro.png',
@@ -179,9 +274,9 @@ const tabs = [
     name: 'Ajuda',
     title: 'Sessão de ajuda',
     content: [
-      'Nesta sessão você irá encontrar as respostas para as perguntas mais frequentes sobre o uso da plataforma e como aproveitar ao máximo todos os recursos que a Juscerto tem a oferecer.',
-      'Além deste tutorial inicial, você encontrará várias outras informações relevantes que reforçam o nosso compromisso e dedicação ao crescimento e sucesso dos nossos clientes.',
-      'Explore essa sessão quando precisar e se tiver alguma dúvida é só entrar em contato que o nosso time estará à disposição para auxiliar na sua jornada.'
+      'Sabemos que o tempo é precioso para advogados. Por isso, criamos a Sessão de Ajuda com um objetivo claro: facilitar a adaptação e esclarecer dúvidas de forma rápida e eficiente.',
+      'Cada tela do sistema contém vídeos curtos e objetivos, cuidadosamente gravados para explicar todas as funcionalidades de forma direta e prática. Isso permite que você se concentre no que realmente importa: seus clientes e seu negócio.',
+      'Priorizamos tornar sua experiência mais intuitiva e produtiva. Aproveite os recursos disponíveis e veja como nossa plataforma pode simplificar suas tarefas diárias.'
     ],
     image: '/images/onAjuda.png',
     badge: null
@@ -208,6 +303,25 @@ function finishOnboarding() {
   // Aqui você pode adicionar lógica para marcar o onboarding como concluído
   // Por exemplo, salvar no localStorage ou fazer uma chamada para a API
   router.push({ name: 'dashboard' })
+}
+
+function navigateToTab(index) {
+  currentTab.value = index
+}
+
+function getTabIcon(index) {
+  const icons = [
+    BarChart3,     // Dashboard
+    AlertTriangle, // Intimações
+    Users,         // Clientes
+    FileText,      // Documentos
+    Scale,         // Processos
+    ClipboardList, // Relatórios
+    Calendar,      // Minha agenda
+    DollarSign,    // Planejamento financeiro
+    HelpCircle     // Ajuda
+  ]
+  return icons[index] || FileText
 }
 </script>
 
@@ -475,26 +589,258 @@ function finishOnboarding() {
   }
 }
 
+  /* Mobile Design */
 @media (max-width: 768px) {
-  .nav-tabs {
-    gap: 16px;
+  .onboarding-container {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow-x: hidden;
   }
   
-  .nav-tab {
-    font-size: 14px;
+  .header {
+    padding: 12px 0;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  
+  .nav-menu {
+    display: none; /* Esconder tabs no mobile */
+  }
+  
+  .content-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 0 12px 180px 12px; /* Adicionar padding-bottom para os botões fixos */
+    text-align: center;
+    overflow-y: auto;
+  }
+  
+  .left-content {
+    order: 1;
   }
   
   .content-title {
-    font-size: 24px;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 16px;
+    padding-top: 16px;
+    color: #0468FA;
+    font-family: 'Inter', sans-serif;
   }
   
   .content-text {
     font-size: 14px;
+    font-weight: 400;
+    text-align: center;
+    line-height: 1.5;
+    color: #374151;
+    margin-bottom: 24px;
+    font-family: 'Inter', sans-serif;
+  }
+  
+  .right-content {
+    display: none; /* Esconder imagem no mobile */
+  }
+  
+  .bottom-actions {
+    display: none; /* Esconder no mobile, usar mobile-actions */
+  }
+  
+  /* Remover estilos conflitantes - usar apenas .mobile-btn e .mobile-skip */
+  
+  /* Sidebar mobile com ícones */
+  .mobile-sidebar {
+    position: fixed;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 10;
+    max-height: calc(100vh - 200px); /* Evitar sobreposição com botões fixos */
+    overflow-y: auto;
+  }
+  
+  .mobile-icon {
+    width: 40px;
+    height: 40px;
+    background-color: #E5E7EB;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6B7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .mobile-icon.active {
+    background-color: #0468FA;
+    color: white;
+  }
+  
+  .mobile-icon:hover {
+    background-color: #D1D5DB;
+  }
+  
+  .mobile-icon.active:hover {
+    background-color: #0468FA;
+  }
+  
+  /* Estilos dos botões mobile */
+  .mobile-action-buttons {
+    display: flex !important;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    min-height: 48px;
+  }
+}
+
+/* Esconder elementos mobile no desktop */
+.mobile-sidebar {
+  display: none;
+}
+
+.mobile-actions {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-sidebar {
+    display: flex;
+  }
+  
+  .mobile-actions {
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    padding: 16px;
+    background-color: white;
+    border-top: 1px solid #E5E7EB;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    box-sizing: border-box;
+  }
+  
+  .mobile-action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+  
+  .mobile-btn {
+    display: block;
+    width: 100%;
+    height: 48px;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid #0468FA;
+    margin: 0;
+  }
+  
+  .mobile-btn.btn-proximo,
+  .mobile-btn.btn-encerrar {
+    background-color: #0468FA;
+    color: white;
+    border: 1px solid #0468FA;
+  }
+  
+  .mobile-btn.btn-voltar {
+    background-color: white;
+    color: #0468FA;
+    border: 1px solid #0468FA;
+  }
+  
+  .mobile-skip {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    color: #0468FA;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    padding: 8px;
+    margin: 0;
+  }
+}
+
+/* Telas muito pequenas (iPhone SE, etc.) */
+@media (max-width: 400px) and (max-height: 700px) {
+  .onboarding-container {
+    padding: 4px;
   }
   
   .header {
-    flex-direction: column;
-    gap: 16px;
+    padding: 8px 0;
+  }
+  
+  .content-area {
+    padding: 0 8px 160px 8px;
+  }
+  
+  .content-title {
+    font-size: 15px;
+    margin-bottom: 12px;
+    padding-top: 8px;
+  }
+  
+  .content-text {
+    font-size: 13px;
+    line-height: 1.4;
+    margin-bottom: 16px;
+  }
+  
+  .mobile-actions {
+    padding: 12px;
+  }
+  
+  .mobile-action-buttons {
+    gap: 12px;
+  }
+  
+  .mobile-btn {
+    height: 44px;
+    font-size: 15px;
+    padding: 10px 20px;
+  }
+  
+  .mobile-skip {
+    font-size: 14px;
+    padding: 6px;
+  }
+  
+  .mobile-sidebar {
+    right: 8px;
+    gap: 6px;
+    top: 35%; /* Mover mais para cima em telas pequenas */
+    transform: translateY(-35%);
+    max-height: calc(100vh - 160px); /* Garantir que não sobreponha os botões */
+    padding-bottom: 10px; /* Espaço extra na parte inferior */
+  }
+  
+  .mobile-icon {
+    width: 36px;
+    height: 36px;
   }
 }
 </style> 
