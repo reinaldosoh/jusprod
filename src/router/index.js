@@ -34,6 +34,12 @@ const routes = [
     component: () => import('../views/ResetPassword/ResetPassword.vue'),
     meta: { requiresAuth: false }
   },
+  {
+    path: '/verificar-email',
+    name: 'verificarEmail',
+    component: () => import('../views/VerificarEmail/VerificarEmail.vue'),
+    meta: { requiresAuth: false }
+  },
   // Rota de fallback para páginas não encontradas
   {
     path: '/:pathMatch(.*)*',

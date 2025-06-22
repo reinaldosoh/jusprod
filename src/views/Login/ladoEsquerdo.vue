@@ -39,25 +39,109 @@ async function handleLogin() {
     isLoading.value = true;
     mostrarErro.value = false;
     
-    // Login com Supabase usando o serviço de autenticação
-    const { data, error } = await authService.signIn(
-      email.value,
-      senha.value,
-      permanecerConectado.value // Passar a preferência do usuário para manter-se conectado
-    );
+    // Primeiro, tentar login com Supabase
+    let userData = null;
+    let loginError = null;
     
-    if (error) throw error;
+    try {
+      const { data, error } = await authService.signIn(
+        email.value,
+        senha.value,
+        permanecerConectado.value
+      );
+      
+      if (error) {
+        loginError = error;
+        
+        // Se o erro for "email_not_confirmed", buscar usuário pelo email para verificar nosso status
+        if (error.message && error.message.includes('email_not_confirmed')) {
+          console.log('⚠️ Email não confirmado no Auth, verificando nosso sistema...');
+          
+          // Buscar usuário pelo email na nossa tabela
+          const { data: usuarioData, error: usuarioError } = await supabase
+            .from('usuario')
+            .select('uuid, email, nome')
+            .eq('email', email.value)
+            .single();
+          
+          if (usuarioError || !usuarioData) {
+            throw new Error('Usuário não encontrado');
+          }
+          
+          userData = { user: { id: usuarioData.uuid, email: usuarioData.email } };
+          console.log('✅ Usuário encontrado na nossa base:', userData.user);
+        } else {
+          throw error;
+        }
+      } else {
+        userData = data;
+        console.log('✅ Usuário autenticado normalmente:', userData.user);
+      }
+    } catch (authError) {
+      throw authError;
+    }
+    
+    // Verificar status de verificação de email via Edge Function
+    console.log('🔍 Verificando status de verificação de email...');
+    
+    const { data: statusData, error: statusError } = await supabase.functions.invoke('verificar-status-email', {
+      body: { userUuid: userData.user.id }
+    });
+    
+    if (statusError) {
+      console.error('❌ Erro ao verificar status de email:', statusError);
+      // Se não conseguiu verificar, assumir que precisa verificar
+    }
+    
+    console.log('📧 Status de verificação:', statusData);
+    
+    // Se email não está validado, redirecionar para verificação
+    if (!statusData || !statusData.email_validado) {
+      console.log('⚠️ Email não validado, redirecionando para verificação...');
+      
+      // Se estava logado, fazer logout primeiro
+      if (!loginError) {
+        await authService.signOut();
+      }
+      
+      // Redirecionar para página de verificação
+      router.push({ 
+        name: 'verificarEmail', 
+        query: { 
+          email: email.value,
+          fromLogin: 'true'
+        } 
+      });
+      return;
+    }
+    
+    // Email validado - se teve erro de login por email não confirmado, tentar login novamente
+    if (loginError && loginError.message && loginError.message.includes('email_not_confirmed')) {
+      console.log('🔄 Email validado, tentando login novamente...');
+      
+      const { data: retryData, error: retryError } = await authService.signIn(
+        email.value,
+        senha.value,
+        permanecerConectado.value
+      );
+      
+      if (retryError) {
+        throw retryError;
+      }
+      
+      userData = retryData;
+      console.log('✅ Login realizado após validação:', userData.user);
+    }
     
     // Login bem-sucedido
     successMessage.value = 'Login realizado com sucesso!';
-    console.log('Usuário autenticado:', data.user);
     
     // Emitir evento para componente pai
     emits('login', { 
       email: email.value, 
       senha: senha.value, 
       permanecerConectado: permanecerConectado.value,
-      user: data.user
+      user: userData.user
     });
     
   } catch (error) {
@@ -147,11 +231,11 @@ function fecharAlertaErro() {
         </div>
         
         <div v-if="mostrarErro">
-          <AlertaErro 
-            :titulo="errorTitulo" 
-            :mensagem="errorMessage" 
-            @click="fecharAlertaErro"
-          />
+                  <AlertaErro 
+          :titulo="errorTitulo" 
+          :mensagem="errorMessage" 
+          @fechar="fecharAlertaErro"
+        />
         </div>
         
         <div v-if="successMessage" class="success-message">

@@ -7,7 +7,7 @@ defineProps({
   type: {
     type: String,
     default: 'primary',
-    validator: (value) => ['primary', 'outline'].includes(value)
+    validator: (value) => ['primary', 'outline', 'link'].includes(value)
   },
   disabled: {
     type: Boolean,
@@ -46,6 +46,7 @@ defineProps({
   border-radius: 8px;
   font-weight: 500;
   font-size: 16px;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -78,6 +79,21 @@ defineProps({
 .button--outline:hover {
   background-color: #f5f9ff;
   box-shadow: 0 0 0 2px rgba(4, 104, 250, 0.1);
+}
+
+.button--link {
+  background: none;
+  border: none;
+  color: #475467;
+  font-size: 14px;
+  padding: 0;
+  height: auto;
+  width: auto;
+  text-decoration: none;
+}
+
+.button--link:hover {
+  text-decoration: underline;
 }
 
 .button:disabled {

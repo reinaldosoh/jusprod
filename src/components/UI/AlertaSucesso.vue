@@ -5,31 +5,48 @@ defineProps({
     default: 'A mensagem foi enviada.'
   }
 });
+
+defineEmits(['fechar']);
 </script>
 
 <template>
-  <div class="alerta-sucesso">
-    <div class="alerta-conteudo">
-      <div class="icone-container">
-        <div class="icone">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="#0468FA" stroke-width="2" fill="none"/>
-            <path d="M8 12L10.5 14.5L16 9" stroke="#0468FA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+  <div class="overlay">
+    <div class="alerta-sucesso">
+      <div class="alerta-conteudo">
+        <div class="icone-container">
+          <div class="icone">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="10" stroke="#0468FA" stroke-width="2" fill="none"/>
+              <path d="M8 12L10.5 14.5L16 9" stroke="#0468FA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+        <div class="mensagem-container">
+          <h2>Sucesso!</h2>
+          <p>{{ mensagem }}</p>
         </div>
       </div>
-      <div class="mensagem-container">
-        <h2>Sucesso!</h2>
-        <p>{{ mensagem }}</p>
+      <div class="botao-container">
+        <button class="botao-entendi" @click="$emit('fechar')">Entendi</button>
       </div>
-    </div>
-    <div class="botao-container">
-      <button class="botao-entendi">Entendi</button>
     </div>
   </div>
 </template>
 
 <style scoped>
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
 .alerta-sucesso {
   width: 374px;
   height: 160px;
@@ -40,6 +57,7 @@ defineProps({
   flex-direction: column;
   padding: 16px;
   box-sizing: border-box;
+  z-index: 1001;
 }
 
 .alerta-conteudo {
@@ -101,5 +119,28 @@ defineProps({
 
 .botao-entendi:hover {
   background-color: #0354cc;
+}
+
+@media (max-width: 768px) {
+  .alerta-sucesso {
+    width: calc(100vw - 32px);
+    max-width: 340px;
+    margin: 16px;
+  }
+  
+  .botao-entendi {
+    width: 100%;
+    height: 48px;
+    font-size: 15px;
+  }
+  
+  .mensagem-container h2 {
+    font-size: 16px;
+  }
+  
+  .mensagem-container p {
+    font-size: 13px;
+    line-height: 1.4;
+  }
 }
 </style>

@@ -29,7 +29,7 @@ const props = defineProps({
   }
 });
 
-const emits = defineEmits(['update:modelValue', 'blur', 'focus']);
+const emits = defineEmits(['update:modelValue', 'blur', 'focus', 'input', 'keydown']);
 
 const inputValue = computed({
   get: () => props.modelValue,
@@ -58,6 +58,16 @@ const handleBlur = (event) => {
 const handleFocus = (event) => {
   emits('focus', event);
 };
+
+// Função para lidar com input
+const handleInput = (event) => {
+  emits('input', event);
+};
+
+// Função para lidar com keydown
+const handleKeydown = (event) => {
+  emits('keydown', event);
+};
 </script>
 
 <template>
@@ -79,6 +89,8 @@ const handleFocus = (event) => {
         class="input-field"
         @blur="handleBlur"
         @focus="handleFocus"
+        @input="handleInput"
+        @keydown="handleKeydown"
       />
       <div v-if="type === 'password'" class="password-toggle" @click="togglePasswordVisibility">
         <EyeOff v-if="!showPassword" size="20" />

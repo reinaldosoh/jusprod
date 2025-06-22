@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import Input from '../../components/UI/Input.vue';
 import Button from '../../components/UI/Button.vue';
 import AlertaErro from '../../components/UI/AlertaErro.vue';
+import AlertaSucesso from '../../components/UI/AlertaSucesso.vue';
 import AlertasInputs from '../../components/UI/AlertasInputs.vue';
 import Dropdown from '../../components/UI/Dropdown.vue';
 import { useAuthStore } from '../../stores/auth';
@@ -31,6 +32,8 @@ const isVerificandoOAB = ref(false);
 const errorTitulo = ref('');
 const errorMessage = ref('');
 const mostrarErro = ref(false);
+const mostrarSucesso = ref(false);
+const mensagemSucesso = ref('');
 
 // Estados para verificação de duplicatas
 const mostrarAlertaOAB = ref(false);
@@ -299,6 +302,26 @@ function validarEtapa1() {
     mostrarErro.value = true;
     return false;
   }
+  
+  // Verificar se o CPF tem exatamente 11 dígitos
+  const cpfLimpo = cpf.value.replace(/\D/g, '');
+  if (cpfLimpo.length !== 11) {
+    errorTitulo.value = 'CPF inválido';
+    errorMessage.value = 'O CPF deve ter exatamente 11 dígitos';
+    mostrarErro.value = true;
+    return false;
+  }
+
+  // Validar telefone (opcional, mas se preenchido deve ter 10 ou 11 dígitos)
+  if (telefone.value) {
+    const telefoneLimpo = telefone.value.replace(/\D/g, '');
+    if (telefoneLimpo.length < 10 || telefoneLimpo.length > 11) {
+      errorTitulo.value = 'Telefone inválido';
+      errorMessage.value = 'O telefone deve ter 10 ou 11 dígitos (incluindo DDD)';
+      mostrarErro.value = true;
+      return false;
+    }
+  }
 
   mostrarErro.value = false;
   return true;
@@ -505,32 +528,91 @@ async function concluirCadastro() {
     isLoading.value = true;
     mostrarErro.value = false;
     
-    // Criar objeto com todos os dados do usuário
-    const userData = {
+    console.log('🚀 Iniciando processo de cadastro via Edge Function...');
+    
+    // Preparar dados para enviar à Edge Function
+    const cpfLimpo = cpf.value.replace(/\D/g, '');
+    const telefoneLimpo = telefone.value.replace(/\D/g, '');
+    
+    // Preparar OABs (limpar números)
+    const oabsLimpas = oabs.value.map(oab => ({
+      numero: oab.numero.replace(/\D/g, ''),
+      uf: oab.uf
+    }));
+    
+    const dadosCadastro = {
       email: email.value,
-      senha: senha.value,
-      nome: nomeCompleto.value,
-      cpf: cpf.value,
-      telefone: telefone.value,
-      oabs: oabs.value
+      password: senha.value,
+      nomeCompleto: nomeCompleto.value.trim(),
+      cpf: cpfLimpo,
+      telefone: telefoneLimpo,
+      oabs: oabsLimpas
     };
     
-    // Registrar usuário no Supabase
-    await authStore.register(email.value, senha.value, userData);
+    console.log('📤 Enviando dados para Edge Function...');
     
-    // Redirecionar para o dashboard após cadastro bem-sucedido
-    // Mantenha isLoading como true durante a navegação
-    router.push({ name: 'dashboard' });
-    // Não definimos isLoading como false aqui, pois a página será desmontada
-    // durante a navegação e não precisamos mais atualizar seu estado
-    return; // Saia da função para evitar que o finally seja executado após navegação
+    // Chamar Edge Function
+    const { supabase } = await import('../../lib/supabase.js');
+    
+    const { data, error } = await supabase.functions.invoke('cadastro-completo', {
+      body: dadosCadastro
+    });
+    
+    if (error) {
+      console.error('❌ Erro na Edge Function:', error);
+      throw new Error(error.message || 'Erro ao processar cadastro');
+    }
+    
+    if (!data || !data.success) {
+      console.error('❌ Resposta inválida da Edge Function:', data);
+      throw new Error(data?.error || 'Erro desconhecido no cadastro');
+    }
+    
+    console.log('✅ Cadastro processado com sucesso:', data);
+    
+    // Log do código de verificação (apenas para desenvolvimento)
+    if (data.verification?.codigo) {
+      console.log('🔑 Código de verificação gerado:', data.verification.codigo);
+    }
+    
+    console.log('🎉 Cadastro concluído com sucesso!');
+    
+    // Mostrar mensagem de sucesso
+    mensagemSucesso.value = 'Conta criada com sucesso!';
+    mostrarSucesso.value = true;
+    
+    return;
     
   } catch (error) {
-    console.error('Erro no cadastro:', error);
+    console.error('❌ Erro no cadastro:', error);
+    
+    // Tratar diferentes tipos de erro
+    let mensagemErro = 'Falha ao criar conta. Tente novamente.';
+    
+    if (error.message) {
+      if (error.message.includes('User already registered') || error.message.includes('já está cadastrado')) {
+        mensagemErro = 'Este e-mail já está cadastrado. Tente fazer login.';
+      } else if (error.message.includes('Password should be at least') || error.message.includes('senha')) {
+        mensagemErro = 'A senha deve ter pelo menos 6 caracteres.';
+      } else if (error.message.includes('Invalid email') || error.message.includes('email')) {
+        mensagemErro = 'E-mail inválido. Verifique o formato.';
+      } else if (error.message.includes('CPF')) {
+        mensagemErro = 'Erro relacionado ao CPF. Verifique os dados informados.';
+      } else if (error.message.includes('nome')) {
+        mensagemErro = 'Erro relacionado ao nome. Verifique os dados informados.';
+      } else if (error.message.includes('telefone')) {
+        mensagemErro = 'Erro relacionado ao telefone. Verifique os dados informados.';
+      } else if (error.message.includes('OAB')) {
+        mensagemErro = 'Erro relacionado à OAB. Verifique os dados informados.';
+      } else {
+        mensagemErro = error.message;
+      }
+    }
+    
     errorTitulo.value = 'Erro no cadastro';
-    errorMessage.value = error.message || 'Falha ao criar conta. Tente novamente.';
+    errorMessage.value = mensagemErro;
     mostrarErro.value = true;
-    isLoading.value = false; // Defina isLoading como false apenas em caso de erro
+    isLoading.value = false;
   }
 }
 
@@ -565,45 +647,102 @@ function etapaAnterior() {
   }
 }
 
-// Formatação de CPF
-function formatarCPF(value) {
-  if (!value) return '';
+
+
+// Função para bloquear caracteres não numéricos no CPF
+function bloquearNaoNumericoCPF(event) {
+  const key = event.key;
+  const input = event.target;
+  const valor = input.value;
+  const numerico = valor.replace(/\D/g, '');
   
-  // Remove todos os caracteres não numéricos
-  const cpfNumerico = value.replace(/\D/g, '');
+  // Permite teclas de controle (backspace, delete, tab, etc.)
+  const teclasPermitidas = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'Home', 'End', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
   
-  // Limita a exatamente 11 dígitos
-  const cpfLimitado = cpfNumerico.slice(0, 11);
+  if (teclasPermitidas.includes(key)) {
+    return; // Permite teclas de controle
+  }
   
-  // Formata o CPF (XXX.XXX.XXX-XX)
-  if (cpfLimitado.length <= 3) {
-    return cpfLimitado;
-  } else if (cpfLimitado.length <= 6) {
-    return `${cpfLimitado.slice(0, 3)}.${cpfLimitado.slice(3)}`;
-  } else if (cpfLimitado.length <= 9) {
-    return `${cpfLimitado.slice(0, 3)}.${cpfLimitado.slice(3, 6)}.${cpfLimitado.slice(6)}`;
-  } else {
-    return `${cpfLimitado.slice(0, 3)}.${cpfLimitado.slice(3, 6)}.${cpfLimitado.slice(6, 9)}-${cpfLimitado.slice(9)}`;
+  // Permite Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+  if (event.ctrlKey || event.metaKey) {
+    return;
+  }
+  
+  // Bloqueia se não for número
+  if (!/[0-9]/.test(key)) {
+    event.preventDefault();
+    return;
+  }
+  
+  // Bloqueia se já tem 11 dígitos
+  if (numerico.length >= 11) {
+    event.preventDefault();
+    return;
   }
 }
 
-// Watch para formatar CPF
+// Função para validar entrada de CPF em tempo real
+function validarEntradaCPF(event) {
+  const input = event.target;
+  const valor = input.value;
+  
+  // Remove todos os caracteres não numéricos
+  const numerico = valor.replace(/\D/g, '');
+  
+  // BLOQUEIA se exceder 11 dígitos
+  if (numerico.length > 11) {
+    event.preventDefault();
+    return;
+  }
+  
+  // Aplica a máscara do CPF: ###.###.###-##
+  let formatado = '';
+  
+  if (numerico.length <= 3) {
+    formatado = numerico;
+  } else if (numerico.length <= 6) {
+    formatado = `${numerico.slice(0, 3)}.${numerico.slice(3)}`;
+  } else if (numerico.length <= 9) {
+    formatado = `${numerico.slice(0, 3)}.${numerico.slice(3, 6)}.${numerico.slice(6)}`;
+  } else {
+    formatado = `${numerico.slice(0, 3)}.${numerico.slice(3, 6)}.${numerico.slice(6, 9)}-${numerico.slice(9, 11)}`;
+  }
+  
+  // Atualiza o valor diretamente no input e no modelo
+  input.value = formatado;
+  cpf.value = formatado;
+}
+
+// Watch para formatar CPF (mantido para compatibilidade)
 function atualizarCPF(valor) {
-  if (!valor) return '';
-  
-  // Remove caracteres não numéricos e limita a 11 dígitos
-  const numerico = valor.toString().replace(/\D/g, '').slice(0, 11);
-  
-  // Formata o CPF
-  let formatado = numerico;
-  if (numerico.length > 3) {
-    formatado = numerico.replace(/^(\d{3})(\d)/, '$1.$2');
+  if (!valor) {
+    cpf.value = '';
+    return '';
   }
-  if (numerico.length > 6) {
-    formatado = formatado.replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3');
+  
+  // Remove todos os caracteres não numéricos
+  const numerico = valor.toString().replace(/\D/g, '');
+  
+  // LIMITA RIGOROSAMENTE a exatamente 11 dígitos - não aceita mais que isso
+  const numeroLimitado = numerico.slice(0, 11);
+  
+  // Se o usuário tentar digitar mais de 11 dígitos, bloqueia
+  if (numerico.length > 11) {
+    // Não atualiza o valor se exceder 11 dígitos
+    return cpf.value;
   }
-  if (numerico.length > 9) {
-    formatado = formatado.replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4');
+  
+  // Aplica a máscara do CPF: ###.###.###-##
+  let formatado = '';
+  
+  if (numeroLimitado.length <= 3) {
+    formatado = numeroLimitado;
+  } else if (numeroLimitado.length <= 6) {
+    formatado = `${numeroLimitado.slice(0, 3)}.${numeroLimitado.slice(3)}`;
+  } else if (numeroLimitado.length <= 9) {
+    formatado = `${numeroLimitado.slice(0, 3)}.${numeroLimitado.slice(3, 6)}.${numeroLimitado.slice(6)}`;
+  } else {
+    formatado = `${numeroLimitado.slice(0, 3)}.${numeroLimitado.slice(3, 6)}.${numeroLimitado.slice(6, 9)}-${numeroLimitado.slice(9, 11)}`;
   }
   
   // Atualiza o valor
@@ -612,43 +751,112 @@ function atualizarCPF(valor) {
   return formatado;
 }
 
-// Formatação de telefone
-function formatarTelefone(value) {
-  if (!value) return '';
+
+
+// Função para bloquear caracteres não numéricos no telefone
+function bloquearNaoNumericoTelefone(event) {
+  const key = event.key;
+  const input = event.target;
+  const valor = input.value;
+  const numerico = valor.replace(/\D/g, '');
   
-  // Remove todos os caracteres não numéricos
-  const telNumerico = value.replace(/\D/g, '');
+  // Permite teclas de controle (backspace, delete, tab, etc.)
+  const teclasPermitidas = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'Home', 'End', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
   
-  // Limita a 11 dígitos (com DDD)
-  const telLimitado = telNumerico.slice(0, 11);
+  if (teclasPermitidas.includes(key)) {
+    return; // Permite teclas de controle
+  }
   
-  // Formata o telefone ((XX) XXXXX-XXXX)
-  if (telLimitado.length <= 2) {
-    return `(${telLimitado}`;
-  } else if (telLimitado.length <= 7) {
-    return `(${telLimitado.slice(0, 2)}) ${telLimitado.slice(2)}`;
-  } else {
-    return `(${telLimitado.slice(0, 2)}) ${telLimitado.slice(2, 7)}-${telLimitado.slice(7)}`;
+  // Permite Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+  if (event.ctrlKey || event.metaKey) {
+    return;
+  }
+  
+  // Bloqueia se não for número
+  if (!/[0-9]/.test(key)) {
+    event.preventDefault();
+    return;
+  }
+  
+  // Bloqueia se já tem 11 dígitos
+  if (numerico.length >= 11) {
+    event.preventDefault();
+    return;
   }
 }
 
-// Watch para formatar telefone
-function atualizarTelefone(valor) {
-  if (!valor) return '';
+// Função para validar entrada de telefone em tempo real
+function validarEntradaTelefone(event) {
+  const input = event.target;
+  const valor = input.value;
   
-  // Remove caracteres não numéricos e limita a 11 dígitos
-  const numerico = valor.toString().replace(/\D/g, '').slice(0, 11);
+  // Remove todos os caracteres não numéricos
+  const numerico = valor.replace(/\D/g, '');
   
-  // Formata o telefone
-  let formatado = numerico;
-  if (numerico.length > 2) {
-    formatado = numerico.replace(/^(\d{2})(\d)/, '($1) $2');
-  } else if (numerico.length > 0) {
-    formatado = '(' + numerico;
+  // BLOQUEIA se exceder 11 dígitos
+  if (numerico.length > 11) {
+    event.preventDefault();
+    return;
   }
   
-  if (numerico.length > 7) {
-    formatado = formatado.replace(/^\((\d{2})\) (\d{5})(\d)/, '($1) $2-$3');
+  // Aplica a máscara do telefone: (##) ####-#### ou (##) #####-####
+  let formatado = '';
+  
+  if (numerico.length === 0) {
+    formatado = '';
+  } else if (numerico.length <= 2) {
+    formatado = `(${numerico}`;
+  } else if (numerico.length <= 6) {
+    // Para números com 10 dígitos: (##) ####-####
+    formatado = `(${numerico.slice(0, 2)}) ${numerico.slice(2)}`;
+  } else if (numerico.length <= 10) {
+    // Para números com 10 dígitos: (##) ####-####
+    formatado = `(${numerico.slice(0, 2)}) ${numerico.slice(2, 6)}-${numerico.slice(6, 10)}`;
+  } else {
+    // Para números com 11 dígitos: (##) #####-####
+    formatado = `(${numerico.slice(0, 2)}) ${numerico.slice(2, 7)}-${numerico.slice(7, 11)}`;
+  }
+  
+  // Atualiza o valor diretamente no input e no modelo
+  input.value = formatado;
+  telefone.value = formatado;
+}
+
+// Watch para formatar telefone (mantido para compatibilidade)
+function atualizarTelefone(valor) {
+  if (!valor) {
+    telefone.value = '';
+    return '';
+  }
+  
+  // Remove todos os caracteres não numéricos
+  const numerico = valor.toString().replace(/\D/g, '');
+  
+  // LIMITA RIGOROSAMENTE a exatamente 11 dígitos - não aceita mais que isso
+  const numeroLimitado = numerico.slice(0, 11);
+  
+  // Se o usuário tentar digitar mais de 11 dígitos, bloqueia
+  if (numerico.length > 11) {
+    // Não atualiza o valor se exceder 11 dígitos
+    return telefone.value;
+  }
+  
+  // Aplica a máscara do telefone: (##) ####-#### ou (##) #####-####
+  let formatado = '';
+  
+  if (numeroLimitado.length === 0) {
+    formatado = '';
+  } else if (numeroLimitado.length <= 2) {
+    formatado = `(${numeroLimitado}`;
+  } else if (numeroLimitado.length <= 6) {
+    // Para números com 10 dígitos: (##) ####-####
+    formatado = `(${numeroLimitado.slice(0, 2)}) ${numeroLimitado.slice(2)}`;
+  } else if (numeroLimitado.length <= 10) {
+    // Para números com 10 dígitos: (##) ####-####
+    formatado = `(${numeroLimitado.slice(0, 2)}) ${numeroLimitado.slice(2, 6)}-${numeroLimitado.slice(6, 10)}`;
+  } else {
+    // Para números com 11 dígitos: (##) #####-####
+    formatado = `(${numeroLimitado.slice(0, 2)}) ${numeroLimitado.slice(2, 7)}-${numeroLimitado.slice(7, 11)}`;
   }
   
   // Atualiza o valor
@@ -660,6 +868,13 @@ function atualizarTelefone(valor) {
 // Fechar alerta de erro
 function fecharAlertaErro() {
   mostrarErro.value = false;
+}
+
+// Fechar alerta de sucesso
+function fecharAlertaSucesso() {
+  mostrarSucesso.value = false;
+  // Redirecionar para a página de login
+  router.push({ name: 'login' });
 }
 </script>
 
@@ -690,6 +905,13 @@ function fecharAlertaErro() {
           :titulo="errorTitulo" 
           :mensagem="errorMessage" 
           @fechar="fecharAlertaErro"
+        />
+      </div>
+
+      <div v-if="mostrarSucesso">
+        <AlertaSucesso 
+          :mensagem="mensagemSucesso" 
+          @fechar="fecharAlertaSucesso"
         />
       </div>
 
@@ -802,7 +1024,8 @@ function fecharAlertaErro() {
             type="text"
             placeholder="000.000.000-00"
             v-model="cpf"
-            @update:modelValue="atualizarCPF"
+            @keydown="bloquearNaoNumericoCPF"
+            @input="validarEntradaCPF"
             @blur="verificarCPFDuplicado"
             maxlength="14"
           >
@@ -819,7 +1042,8 @@ function fecharAlertaErro() {
             type="text"
             placeholder="(00) 00000-0000"
             v-model="telefone"
-            @update:modelValue="atualizarTelefone"
+            @keydown="bloquearNaoNumericoTelefone"
+            @input="validarEntradaTelefone"
             maxlength="15"
           >
             <template #icon>
@@ -922,18 +1146,20 @@ function fecharAlertaErro() {
         </div>
         
         <div class="termos-container">
-          <div class="custom-checkbox">
-            <input 
-              type="checkbox" 
-              id="aceite-termos" 
-              class="checkbox-input" 
-              v-model="aceitouTermos"
-            />
-            <span class="checkbox-custom"></span>
-          </div>
-          <label for="aceite-termos" class="checkbox-label">
-            Declaro que li e aceito os 
-            <a href="#" class="link-termos">termos de uso e política de privacidade</a>.
+          <label for="aceite-termos" class="termos-label-completa">
+            <div class="custom-checkbox">
+              <input 
+                type="checkbox" 
+                id="aceite-termos" 
+                class="checkbox-input" 
+                v-model="aceitouTermos"
+              />
+              <span class="checkbox-custom"></span>
+            </div>
+            <span class="checkbox-text">
+              Declaro que li e aceito os 
+              <a href="#" class="link-termos" @click.stop>termos de uso e política de privacidade</a>.
+            </span>
           </label>
         </div>
         
@@ -959,8 +1185,14 @@ function fecharAlertaErro() {
         <div v-if="!podeFinalizarCadastro && !isLoading" class="requisitos-finalizacao">
           <p class="texto-requisitos">
             Para concluir o cadastro:
-            <span v-if="!senhaValida" class="requisito-pendente">✓ Complete todos os requisitos de senha</span>
-            <span v-if="!aceitouTermos" class="requisito-pendente">✓ Aceite os termos de uso</span>
+            <span v-if="!senhaValida" class="requisito-pendente">
+              <CheckCircle size="16" class="icone-requisito-pendente" />
+              Complete todos os requisitos de senha
+            </span>
+            <span v-if="!aceitouTermos" class="requisito-pendente">
+              <CheckCircle size="16" class="icone-requisito-pendente" />
+              Aceite os termos de uso
+            </span>
           </p>
         </div>
         
@@ -1269,10 +1501,15 @@ function fecharAlertaErro() {
 }
 
 .termos-container {
+  margin-top: 16px;
+}
+
+.termos-label-completa {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin-top: 16px;
+  cursor: pointer;
+  user-select: none;
 }
 
 .custom-checkbox {
@@ -1287,8 +1524,10 @@ function fecharAlertaErro() {
   position: absolute;
   opacity: 0;
   cursor: pointer;
-  height: 0;
-  width: 0;
+  height: 16px;
+  width: 16px;
+  z-index: 2;
+  margin: 0;
 }
 
 .checkbox-custom {
@@ -1300,10 +1539,15 @@ function fecharAlertaErro() {
   background-color: white;
   border: 1px solid #D0D5DD;
   border-radius: 2px;
+  transition: all 0.2s ease;
 }
 
 .checkbox-input:checked ~ .checkbox-custom {
   background-color: #0468FA;
+  border-color: #0468FA;
+}
+
+.checkbox-input:hover ~ .checkbox-custom {
   border-color: #0468FA;
 }
 
@@ -1324,10 +1568,11 @@ function fecharAlertaErro() {
   transform: rotate(45deg);
 }
 
-.checkbox-label {
+.checkbox-text {
   font-size: 14px;
   color: #475467;
   text-align: left;
+  line-height: 1.4;
 }
 
 .link-termos {
@@ -1357,6 +1602,14 @@ function fecharAlertaErro() {
   color: #D92D20;
   font-size: 13px;
   margin-left: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.icone-requisito-pendente {
+  color: #D92D20;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {

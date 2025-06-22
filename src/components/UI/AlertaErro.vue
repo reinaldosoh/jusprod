@@ -9,6 +9,8 @@ defineProps({
     default: 'Conta exluída com sucesso. Esperamos ver você em breve!'
   }
 });
+
+defineEmits(['fechar']);
 </script>
 
 <template>
@@ -30,7 +32,7 @@ defineProps({
         </div>
       </div>
       <div class="botao-container">
-        <button class="botao-entendi" @click="$emit('click')">Entendi</button>
+        <button class="botao-entendi" @click="$emit('fechar')">Entendi</button>
       </div>
     </div>
   </div>

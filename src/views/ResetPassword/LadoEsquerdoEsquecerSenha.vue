@@ -161,11 +161,11 @@ function handleSimularResetSenha() {
         </div>
         
         <div v-if="mostrarErro">
-          <AlertaErro 
-            :titulo="errorTitulo" 
-            :mensagem="errorMessage" 
-            @click="fecharAlertaErro"
-          />
+                  <AlertaErro 
+          :titulo="errorTitulo" 
+          :mensagem="errorMessage" 
+          @fechar="fecharAlertaErro"
+        />
         </div>
         
         <div v-if="successMessage" class="success-message">
