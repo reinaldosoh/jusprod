@@ -1,5 +1,8 @@
+/* Importação da fonte Inter */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
@@ -13,6 +16,10 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+* {
+  font-family: 'Inter', sans-serif;
+}
+
 a {
   font-weight: 500;
   color: #646cff;
@@ -24,10 +31,10 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
+  display: block;
   min-width: 320px;
   min-height: 100vh;
+  height: auto;
 }
 
 /* Ajustes para scroll mobile */
@@ -41,7 +48,6 @@ body {
   
   body {
     display: block;
-    place-items: initial;
   }
   
   #app {
@@ -51,6 +57,7 @@ body {
     text-align: left;
     height: auto;
     min-height: 100vh;
+    width: 100%;
   }
 }
 
@@ -75,7 +82,24 @@ button:hover {
 }
 button:focus,
 button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  outline: none !important;
+}
+
+/* Remove outline de todos os botões e elementos focáveis */
+button, 
+input[type="button"], 
+input[type="submit"], 
+input[type="reset"],
+.button {
+  outline: none !important;
+}
+
+button:focus,
+button:active,
+input:focus,
+input:active {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .card {
@@ -83,10 +107,13 @@ button:focus-visible {
 }
 
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+  height: auto;
+  min-height: 100vh;
 }
 
 @media (prefers-color-scheme: light) {

@@ -49,6 +49,7 @@ defineProps({
   font-family: 'Inter', sans-serif;
   cursor: pointer;
   transition: all 0.2s ease;
+  outline: none;
 }
 
 @media (max-width: 768px) {

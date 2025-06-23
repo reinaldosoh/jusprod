@@ -46,6 +46,12 @@ const routes = [
     component: () => import('../views/Onboarding/Onboarding.vue'),
     meta: { requiresAuth: true }
   },
+  {
+    path: '/primeiros-passos',
+    name: 'primeiroPassos',
+    component: () => import('../views/PrimeiroPassos/PrimeiroPassos.vue'),
+    meta: { requiresAuth: true }
+  },
   // Rota de fallback para páginas não encontradas
   {
     path: '/:pathMatch(.*)*',

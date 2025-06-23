@@ -115,6 +115,33 @@ async function handleLogin() {
       return;
     }
     
+    // Verificar se o usuário já completou o onboarding
+    console.log('🔍 Verificando status do onboarding...');
+    
+    const { data: onboardingData, error: onboardingError } = await supabase
+      .from('onboarding')
+      .select('finalizado')
+      .eq('uuid', userData.user.id)
+      .single();
+    
+    if (onboardingError && onboardingError.code !== 'PGRST116') {
+      console.error('❌ Erro ao verificar onboarding:', onboardingError);
+      // Se não conseguiu verificar, assumir que não fez onboarding
+    }
+    
+    console.log('🎯 Status do onboarding:', onboardingData);
+    
+    // Se não há registro de onboarding ou não foi finalizado, redirecionar para onboarding
+    if (!onboardingData || !onboardingData.finalizado) {
+      console.log('⚠️ Onboarding não finalizado, redirecionando para tutorial...');
+      
+      // Redirecionar para página de onboarding
+      router.push({ name: 'onboarding' });
+      return;
+    }
+    
+    console.log('✅ Onboarding finalizado, redirecionando para dashboard...');
+    
     // Email validado - se teve erro de login por email não confirmado, tentar login novamente
     if (loginError && loginError.message && loginError.message.includes('email_not_confirmed')) {
       console.log('🔄 Email validado, tentando login novamente...');
@@ -133,8 +160,11 @@ async function handleLogin() {
       console.log('✅ Login realizado após validação:', userData.user);
     }
     
-    // Login bem-sucedido
+    // Login bem-sucedido - redirecionar para dashboard
     successMessage.value = 'Login realizado com sucesso!';
+    
+    // Redirecionar para dashboard
+    router.push({ name: 'dashboard' });
     
     // Emitir evento para componente pai
     emits('login', { 

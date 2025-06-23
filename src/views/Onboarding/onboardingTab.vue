@@ -91,6 +91,7 @@
               v-show="currentTab === 8"
               class="mobile-btn btn-voltar" 
               @click="previousTab"
+              :disabled="isLoading"
             >
               Voltar
             </button>
@@ -98,14 +99,17 @@
               v-show="currentTab === 8"
               class="mobile-btn btn-encerrar" 
               @click="finishOnboarding"
+              :disabled="isLoading"
             >
-              Encerrar
+              <span v-if="isLoading">Carregando...</span>
+              <span v-else>Encerrar</span>
             </button>
           </div>
           
           <!-- Pular tutorial - SEMPRE VISÍVEL -->
-          <button class="mobile-skip" @click="finishOnboarding">
-            Pular tutorial
+          <button class="mobile-skip" @click="skipTutorial" :disabled="isLoading">
+            <span v-if="isLoading">Carregando...</span>
+            <span v-else>Pular tutorial</span>
           </button>
         </div>
       </div>
@@ -140,13 +144,16 @@
               v-if="currentTab === tabs.length - 1"
               class="btn-encerrar"
               @click="finishOnboarding"
+              :disabled="isLoading"
             >
-              Encerrar
+              <span v-if="isLoading">Carregando...</span>
+              <span v-else>Encerrar</span>
             </button>
           </div>
           
-          <button class="btn-skip" @click="finishOnboarding">
-            Pular tutorial
+          <button class="btn-skip" @click="skipTutorial" :disabled="isLoading">
+            <span v-if="isLoading">Carregando...</span>
+            <span v-else>Pular tutorial</span>
           </button>
         </div>
       </div>
@@ -184,6 +191,7 @@ import {
 
 const router = useRouter()
 const currentTab = ref(0)
+const isLoading = ref(false)
 
 const tabs = [
   {
@@ -299,14 +307,120 @@ function previousTab() {
   }
 }
 
-function finishOnboarding() {
-  // Aqui você pode adicionar lógica para marcar o onboarding como concluído
-  // Por exemplo, salvar no localStorage ou fazer uma chamada para a API
-  router.push({ name: 'dashboard' })
+async function finishOnboarding() {
+  if (isLoading.value) return; // Prevenir múltiplos cliques
+  
+  try {
+    isLoading.value = true;
+    console.log('🎯 Finalizando onboarding...');
+    
+    // Importar supabase
+    const { supabase } = await import('../../lib/supabase.js');
+    
+    // Obter usuário atual
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.error('❌ Erro ao obter usuário:', userError);
+      // Se não conseguiu obter usuário, redirecionar para login
+      router.push({ name: 'login' });
+      return;
+    }
+    
+    console.log('👤 Finalizando onboarding para usuário:', user.id);
+    
+    // Chamar Edge Function para finalizar onboarding e primeiro acesso
+    const { data, error } = await supabase.functions.invoke('finalizar-onboarding', {
+      body: { 
+        userUuid: user.id,
+        tipo: 'completo' // Indica que completou o tutorial
+      }
+    });
+    
+    if (error) {
+      console.error('❌ Erro na Edge Function:', error);
+      throw new Error(error.message || 'Erro ao finalizar onboarding');
+    }
+    
+    if (!data || !data.success) {
+      console.error('❌ Resposta inválida da Edge Function:', data);
+      throw new Error(data?.error || 'Erro desconhecido ao finalizar onboarding');
+    }
+    
+    console.log('✅ Onboarding e primeiro acesso finalizados com sucesso!');
+    
+    // Redirecionar para primeiros passos
+    router.push({ name: 'primeiroPassos' });
+    
+  } catch (error) {
+    console.error('❌ Erro ao finalizar onboarding:', error);
+    
+    // Mesmo com erro, redirecionar para primeiros passos
+    // O usuário pode tentar novamente mais tarde
+    router.push({ name: 'primeiroPassos' });
+  } finally {
+    isLoading.value = false;
+  }
 }
 
 function navigateToTab(index) {
   currentTab.value = index
+}
+
+async function skipTutorial() {
+  if (isLoading.value) return; // Prevenir múltiplos cliques
+  
+  try {
+    isLoading.value = true;
+    console.log('⏭️ Pulando tutorial...');
+    
+    // Importar supabase
+    const { supabase } = await import('../../lib/supabase.js');
+    
+    // Obter usuário atual
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      console.error('❌ Erro ao obter usuário:', userError);
+      // Se não conseguiu obter usuário, redirecionar para login
+      router.push({ name: 'login' });
+      return;
+    }
+    
+    console.log('👤 Pulando tutorial para usuário:', user.id);
+    
+    // Chamar Edge Function para finalizar onboarding e primeiro acesso
+    const { data, error } = await supabase.functions.invoke('finalizar-onboarding', {
+      body: { 
+        userUuid: user.id,
+        tipo: 'pulado' // Indica que pulou o tutorial
+      }
+    });
+    
+    if (error) {
+      console.error('❌ Erro na Edge Function:', error);
+      throw new Error(error.message || 'Erro ao pular tutorial');
+    }
+    
+    if (!data || !data.success) {
+      console.error('❌ Resposta inválida da Edge Function:', data);
+      throw new Error(data?.error || 'Erro desconhecido ao pular tutorial');
+    }
+    
+    console.log('✅ Tutorial pulado e registros atualizados com sucesso!');
+    
+    // Redirecionar para primeiros passos
+    router.push({ name: 'primeiroPassos' });
+    
+  } catch (error) {
+    console.error('❌ Erro ao pular tutorial:', error);
+    
+    // Mesmo com erro, redirecionar para primeiros passos
+    // O usuário pode tentar novamente mais tarde
+    router.push({ name: 'primeiroPassos' });
+  } finally {
+    isLoading.value = false;
+  }
 }
 
 function getTabIcon(index) {
@@ -514,6 +628,14 @@ function getTabIcon(index) {
   box-shadow: 0 0 0 2px rgba(4, 104, 250, 0.1);
 }
 
+.btn-voltar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #F3F4F6 !important;
+  color: #9CA3AF !important;
+  border-color: #D1D5DB !important;
+}
+
 .btn-proximo,
 .btn-encerrar {
   background-color: #0468FA;
@@ -534,6 +656,14 @@ function getTabIcon(index) {
   background-color: #0354cc;
 }
 
+.btn-proximo:disabled,
+.btn-encerrar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #9CA3AF !important;
+  color: #6B7280 !important;
+}
+
 .btn-skip {
   background: none;
   border: none;
@@ -551,6 +681,13 @@ function getTabIcon(index) {
 
 .btn-skip:hover {
   text-decoration: underline;
+}
+
+.btn-skip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  color: #9CA3AF !important;
+  text-decoration: none !important;
 }
 
 /* Responsive Design */
@@ -768,6 +905,14 @@ function getTabIcon(index) {
     border: 1px solid #0468FA;
   }
   
+  .mobile-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: #9CA3AF !important;
+    color: #6B7280 !important;
+    border-color: #9CA3AF !important;
+  }
+  
   .mobile-skip {
     display: block;
     width: 100%;
@@ -781,6 +926,12 @@ function getTabIcon(index) {
     text-align: center;
     padding: 8px;
     margin: 0;
+  }
+  
+  .mobile-skip:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    color: #9CA3AF !important;
   }
 }
 
