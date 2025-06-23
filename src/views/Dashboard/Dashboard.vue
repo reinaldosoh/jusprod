@@ -3,19 +3,31 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
 
+
 const authStore = useAuthStore();
 const router = useRouter();
 const user = ref(null);
 
 onMounted(async () => {
   try {
-    // Verifica se o usuário está autenticado
+    // Aguarda a inicialização da autenticação se necessário
+    if (authStore.loading) {
+      while (authStore.loading) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+    
     if (!authStore.isAuthenticated()) {
       router.push({ name: 'login' });
       return;
     }
     
     user.value = authStore.user;
+    
+    // Limpar qualquer parâmetro de URL (upgrade, plano, periodo)
+    if (window.location.search) {
+      router.replace({ name: 'dashboard' });
+    }
   } catch (error) {
     console.error('Erro ao carregar dashboard:', error);
   }
@@ -29,6 +41,8 @@ async function handleLogout() {
     console.error('Erro ao fazer logout:', error);
   }
 }
+
+
 </script>
 
 <template>
@@ -46,6 +60,8 @@ async function handleLogout() {
     <main class="dashboard-content">
       <h1 class="dashboard-title">Dashboard</h1>
       <p class="welcome-message">Bem-vindo ao Jusprod!</p>
+      
+
       
       <div class="dashboard-cards">
         <div class="dashboard-card">

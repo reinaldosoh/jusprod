@@ -102,10 +102,14 @@ const isAuthenticated = () => {
   return !!user.value && !!session.value
 }
 
+// Inicializa automaticamente
+let initialized = false
+
 // Exporta o store de autenticação
 export const useAuthStore = () => {
   // Inicializa o estado de autenticação quando o store é usado pela primeira vez
-  if (loading.value) {
+  if (!initialized) {
+    initialized = true
     initAuth()
   }
   

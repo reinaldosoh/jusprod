@@ -7,8 +7,8 @@ const router = useRouter();
 
 // Função para buscar todos os processos automaticamente
 function buscarProcessosAutomaticamente() {
-  console.log('Buscando todos os processos automaticamente...');
-  // Implementar lógica de busca automática
+  console.log('Redirecionando para página de planos...');
+  router.push('/planos');
 }
 
 // Função para começar teste grátis com busca manual

@@ -52,6 +52,18 @@ const routes = [
     component: () => import('../views/PrimeiroPassos/PrimeiroPassos.vue'),
     meta: { requiresAuth: true }
   },
+  {
+    path: '/planos',
+    name: 'planos',
+    component: () => import('../views/Planos/Planos.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/pagamento-confirmado',
+    name: 'pagamentoConfirmado',
+    component: () => import('../views/PagamentoConfirmado/PagamentoConfirmado.vue'),
+    meta: { requiresAuth: true }
+  },
   // Rota de fallback para páginas não encontradas
   {
     path: '/:pathMatch(.*)*',

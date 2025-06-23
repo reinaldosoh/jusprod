@@ -7,7 +7,7 @@ defineProps({
   type: {
     type: String,
     default: 'primary',
-    validator: (value) => ['primary', 'outline', 'link'].includes(value)
+    validator: (value) => ['primary', 'secondary', 'outline', 'white', 'link'].includes(value)
   },
   disabled: {
     type: Boolean,
@@ -71,6 +71,16 @@ defineProps({
   background-color: #0354cc;
 }
 
+.button--secondary {
+  background-color: #F8FAFC;
+  color: #0468FA;
+  border: 1px solid #0468FA;
+}
+
+.button--secondary:hover {
+  background-color: #E5F3FF;
+}
+
 .button--outline {
   background-color: white;
   color: #0468FA;
@@ -80,6 +90,17 @@ defineProps({
 .button--outline:hover {
   background-color: #f5f9ff;
   box-shadow: 0 0 0 2px rgba(4, 104, 250, 0.1);
+}
+
+.button--white {
+  background-color: white;
+  color: #0468FA;
+  border: 1px solid white;
+}
+
+.button--white:hover {
+  background-color: #F8FAFC;
+  border-color: #F8FAFC;
 }
 
 .button--link {
