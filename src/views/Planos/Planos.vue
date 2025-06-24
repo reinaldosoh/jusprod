@@ -52,10 +52,10 @@ const isPlanoDisabled = computed(() => {
   console.log('toggleAnual:', toggleAnual);
   console.log('indiceAtual:', indiceAtual);
   
-  // Se o usuário tem plano free, apenas o free fica sempre desabilitado no anual
+  // Se o usuário tem plano free, o plano free sempre fica desabilitado
   if (planoAtual === 'free') {
     return {
-      free: toggleAnual, // Free só fica desabilitado no anual
+      free: true, // Free sempre desabilitado se usuário já está no free
       silver: false,
       gold: false,
       platinum: false
@@ -216,14 +216,32 @@ async function assinarPlano() {
     }
 
     // Criar sessão de checkout
-    const checkoutUrl = await createCheckoutSession(
+    const result = await createCheckoutSession(
       planoSelecionado.value,
       isAnual.value,
       usuarioLogado.value.uuid // Usar UUID em vez de email
     );
 
-    // Redirecionar para o checkout do Stripe
-    window.location.href = checkoutUrl;
+    // Verificar se foi upgrade direto
+    if (result?.upgrade_success) {
+      // Upgrade realizado com sucesso sem checkout
+      const planoNome = planoSelecionado.value.charAt(0).toUpperCase() + planoSelecionado.value.slice(1);
+      const periodoTexto = isAnual.value ? 'Anual' : 'Mensal';
+      upgradeMessage.value = `Parabéns! Você atualizou com sucesso para o plano ${planoNome} ${periodoTexto}!`;
+      showUpgradeSuccess.value = true;
+      
+      // Recarregar dados do usuário
+      await loadUserData();
+      
+      return;
+    }
+
+    // Se chegou aqui, precisa redirecionar para checkout
+    if (typeof result === 'string') {
+      window.location.href = result;
+    } else {
+      throw new Error('URL de checkout inválida');
+    }
 
   } catch (error) {
     console.error('Erro ao criar checkout:', error);

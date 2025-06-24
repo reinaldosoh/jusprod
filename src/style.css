@@ -5,11 +5,9 @@
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
+  color-scheme: light;
+  color: #213547;
+  background-color: #ffffff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -35,6 +33,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   height: auto;
+  background-color: #ffffff;
 }
 
 /* Ajustes para scroll mobile */
@@ -73,7 +72,7 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: #f9f9f9;
   cursor: pointer;
   transition: border-color 0.25s;
 }
@@ -114,6 +113,7 @@ input:active {
   width: 100%;
   height: auto;
   min-height: 100vh;
+  background-color: #ffffff;
 }
 
 @media (prefers-color-scheme: light) {

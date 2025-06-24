@@ -64,6 +64,55 @@ const routes = [
     component: () => import('../views/PagamentoConfirmado/PagamentoConfirmado.vue'),
     meta: { requiresAuth: true }
   },
+  // Novas rotas do sistema
+  {
+    path: '/intimacoes',
+    name: 'intimacoes',
+    component: () => import('../views/Intimacoes/Intimacoes.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/clientes',
+    name: 'clientes',
+    component: () => import('../views/Clientes/Clientes.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/documentos',
+    name: 'documentos',
+    component: () => import('../views/Documentos/Documentos.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/processos',
+    name: 'processos',
+    component: () => import('../views/Processos/Processos.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/relatorios',
+    name: 'relatorios',
+    component: () => import('../views/Relatorios/Relatorios.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/agenda',
+    name: 'agenda',
+    component: () => import('../views/Agenda/Agenda.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/financeiro',
+    name: 'financeiro',
+    component: () => import('../views/Financeiro/Financeiro.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/ajuda',
+    name: 'ajuda',
+    component: () => import('../views/Ajuda/Ajuda.vue'),
+    meta: { requiresAuth: true }
+  },
   // Rota de fallback para páginas não encontradas
   {
     path: '/:pathMatch(.*)*',

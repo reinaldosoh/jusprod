@@ -49,6 +49,12 @@ export async function createCheckoutSession(plano, isAnual, userUuid) {
       throw error;
     }
 
+    // Verificar se foi um upgrade direto (sem checkout necessário)
+    if (data?.upgrade_success) {
+      console.log('✅ Upgrade realizado diretamente:', data.message);
+      return { upgrade_success: true, message: data.message };
+    }
+
     if (!data?.checkout_url) {
       throw new Error('URL de checkout não recebida');
     }

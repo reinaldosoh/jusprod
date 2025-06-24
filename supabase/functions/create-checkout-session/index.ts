@@ -46,7 +46,7 @@ Deno.serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Buscar dados do usuário
+    // Buscar dados do usuário incluindo assinatura atual
     const { data: userData, error: userError } = await supabase
       .from('usuario')
       .select('id, role_atual, email')
@@ -59,6 +59,16 @@ Deno.serve(async (req: Request) => {
         { status: 404, headers: corsHeaders }
       );
     }
+
+    // Buscar assinatura ativa no banco
+    const { data: assinaturaData } = await supabase
+      .from('usuario_assinaturas')
+      .select('transaction_id, status')
+      .eq('usuario_id', userData.id)
+      .eq('status', 'ativa')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
 
     // Buscar dados do plano de destino
     const { data: planData, error: planError } = await supabase
@@ -90,65 +100,143 @@ Deno.serve(async (req: Request) => {
       }
     };
     
-    const priceId = priceIds[planId]?.[billingCycle];
-    if (!priceId) {
+    const newPriceId = priceIds[planId]?.[billingCycle];
+    if (!newPriceId) {
       return new Response(
         JSON.stringify({ error: 'Plano ou período inválido' }),
         { status: 400, headers: corsHeaders }
       );
     }
 
-    // Determinar URLs de redirecionamento simples
+    // Definir o período em português
+    const billingPeriod = billingCycle === 'yearly' ? 'anual' : 'mensal';
     const baseUrl = req.headers.get('origin') || 'http://localhost:5173';
-    const successUrl = `${baseUrl}/dashboard`;
-    const cancelUrl = `${baseUrl}/planos`;
+    
+    // ===== LÓGICA PRINCIPAL: UPGRADE/DOWNGRADE vs NOVA ASSINATURA =====
+    
+    if (assinaturaData && userData.role_atual !== 'free') {
+      // CENÁRIO 1: USUÁRIO JÁ TEM ASSINATURA ATIVA - CRIAR NOVA (N8N FARÁ CANCELAMENTO)
+      console.log('🔄 Usuário tem assinatura ativa, criando nova sessão (n8n fará cancelamento após pagamento)');
+      
+      // Criar nova sessão de checkout (assinatura atual permanece ativa até n8n processar)
+      const checkoutData = new URLSearchParams({
+        'mode': 'subscription',
+        'success_url': `${baseUrl}/dashboard?upgrade=success&plano=${planId}&periodo=${billingCycle}`,
+        'cancel_url': `${baseUrl}/planos`,
+        'customer_email': userData.email,
+        'line_items[0][price]': newPriceId,
+        'line_items[0][quantity]': '1',
+        // Metadados no checkout session (para checkout.session.completed)
+        'metadata[plan_id]': planId,
+        'metadata[plan_destino_id]': planData.id.toString(),
+        'metadata[user_id]': userData.id.toString(),
+        'metadata[user_uuid]': userUuid,
+        'metadata[tipo_transacao]': 'upgrade',
+        'metadata[plano_atual]': userData.role_atual,
+        'metadata[billing_cycle]': billingCycle,
+        // Metadados na subscription (para invoice.payment_succeeded)
+        'subscription_data[metadata][plan_name]': planId,
+        'subscription_data[metadata][plan_id]': planData.id.toString(),
+        'subscription_data[metadata][plan_destino_id]': planData.id.toString(),
+        'subscription_data[metadata][user_id]': userData.id.toString(),
+        'subscription_data[metadata][user_uuid]': userUuid,
+        'subscription_data[metadata][tipo_transacao]': 'upgrade',
+        'subscription_data[metadata][plano_atual]': userData.role_atual,
+        'subscription_data[metadata][billing_cycle]': billingCycle,
+        'subscription_data[metadata][billing_period]': billingPeriod,
+        'allow_promotion_codes': 'true'
+      });
 
-    // Criar sessão no Stripe com TODOS os metadados necessários
-    const checkoutData = new URLSearchParams({
-      'mode': 'subscription',
-      'success_url': successUrl,
-      'cancel_url': cancelUrl,
-      'customer_email': userData.email,
-      'line_items[0][price]': priceId,
-      'line_items[0][quantity]': '1',
-      'metadata[plan_name]': planId,
-      'metadata[plan_id]': planData.id.toString(),
-      'metadata[plan_destino_id]': planData.id.toString(),
-      'metadata[user_id]': userData.id.toString(),
-      'metadata[user_uuid]': userUuid,
-      'metadata[billing_cycle]': billingCycle,
-      'metadata[tipo_transacao]': userData.role_atual === 'free' ? 'novo' : 'upgrade',
-      'metadata[plano_atual]': userData.role_atual,
-      'metadata[previous_plan]': userData.role_atual
-    });
+      const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${STRIPE_SECRET_KEY}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: checkoutData.toString()
+      });
 
-    const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${STRIPE_SECRET_KEY}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: checkoutData.toString()
-    });
+      if (!stripeResponse.ok) {
+        const errorText = await stripeResponse.text();
+        console.error('Erro do Stripe (upgrade):', errorText);
+        return new Response(
+          JSON.stringify({ error: `Erro do Stripe: ${stripeResponse.status}` }),
+          { status: 500, headers: corsHeaders }
+        );
+      }
 
-    if (!stripeResponse.ok) {
-      const errorText = await stripeResponse.text();
-      console.error('Erro do Stripe:', errorText);
+      const session = await stripeResponse.json();
+
       return new Response(
-        JSON.stringify({ error: `Erro do Stripe: ${stripeResponse.status}` }),
-        { status: 500, headers: corsHeaders }
+        JSON.stringify({ 
+          checkout_url: session.url,
+          session_id: session.id,
+          type: 'upgrade'
+        }),
+        { status: 200, headers: corsHeaders }
+      );
+      
+    } else {
+      // CENÁRIO 2: USUÁRIO FREE OU SEM ASSINATURA - CRIAR NOVA ASSINATURA
+      console.log('🆕 Criando nova assinatura para usuário free');
+      
+      const checkoutData = new URLSearchParams({
+        'mode': 'subscription',
+        'success_url': `${baseUrl}/pagamento-confirmado?assinaturarealizadasucesso=true`,
+        'cancel_url': `${baseUrl}/planos`,
+        'customer_email': userData.email,
+        'line_items[0][price]': newPriceId,
+        'line_items[0][quantity]': '1',
+        // Metadados no checkout session (para checkout.session.completed)
+        'metadata[plan_id]': planId,
+        'metadata[plan_destino_id]': planData.id.toString(),
+        'metadata[user_id]': userData.id.toString(),
+        'metadata[user_uuid]': userUuid,
+        'metadata[tipo_transacao]': 'novo',
+        'metadata[plano_atual]': userData.role_atual,
+        'metadata[billing_cycle]': billingCycle,
+        // Metadados na subscription (para invoice.payment_succeeded)
+        'subscription_data[metadata][plan_name]': planId,
+        'subscription_data[metadata][plan_id]': planData.id.toString(),
+        'subscription_data[metadata][plan_destino_id]': planData.id.toString(),
+        'subscription_data[metadata][user_id]': userData.id.toString(),
+        'subscription_data[metadata][user_uuid]': userUuid,
+        'subscription_data[metadata][tipo_transacao]': 'novo',
+        'subscription_data[metadata][plano_atual]': userData.role_atual,
+        'subscription_data[metadata][billing_cycle]': billingCycle,
+        'subscription_data[metadata][billing_period]': billingPeriod,
+        'allow_promotion_codes': 'true'
+      });
+
+      const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${STRIPE_SECRET_KEY}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: checkoutData.toString()
+      });
+
+      if (!stripeResponse.ok) {
+        const errorText = await stripeResponse.text();
+        console.error('Erro do Stripe (nova assinatura):', errorText);
+        return new Response(
+          JSON.stringify({ error: `Erro do Stripe: ${stripeResponse.status}` }),
+          { status: 500, headers: corsHeaders }
+        );
+      }
+
+      const session = await stripeResponse.json();
+
+      return new Response(
+        JSON.stringify({ 
+          checkout_url: session.url,
+          session_id: session.id,
+          type: 'new_subscription'
+        }),
+        { status: 200, headers: corsHeaders }
       );
     }
-
-    const session = await stripeResponse.json();
-
-    return new Response(
-      JSON.stringify({ 
-        checkout_url: session.url,
-        session_id: session.id 
-      }),
-      { status: 200, headers: corsHeaders }
-    );
 
   } catch (error) {
     console.error('Erro na Edge Function:', error);
