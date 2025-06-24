@@ -1,15 +1,20 @@
 <template>
   <div>
     <MenuFixo />
-    <main class="container mx-auto px-6 py-8">
-      <div class="text-center">
-        <h1 class="text-2xl font-bold text-gray-900 mb-4">Processos</h1>
-        <p class="text-gray-600">Em breve</p>
-      </div>
-    </main>
+    <Filtro @search="handleSearch" />
+    <ListaProcesso :searchTerm="searchTerm" />
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import MenuFixo from '../../components/UI/MenuFixo.vue'
+import Filtro from './Filtro.vue'
+import ListaProcesso from './listaprocesso.vue'
+
+const searchTerm = ref('')
+
+const handleSearch = (term) => {
+  searchTerm.value = term
+}
 </script> 

@@ -160,20 +160,20 @@ Deno.serve(async (req: Request) => {
         autor: processo.titulo_polo_ativo || null,
         reu: processo.titulo_polo_passivo || null,
         tribunal: fonte.sigla || null,
-        ultima_movimentacao: fonte.data_ultima_movimentacao || processo.data_ultima_movimentacao,
-        ultimaMovimentacao: new Date(processo.data_ultima_movimentacao),
+        ultima_movimentacao: fonte.data_ultima_movimentacao || processo.data_ultima_movimentacao || null,
+        ultimaMovimentacao: processo.data_ultima_movimentacao ? new Date(processo.data_ultima_movimentacao) : null,
         data_inicio: processo.data_inicio,
-        dataInicio: new Date(processo.data_inicio),
-        qdt_movimentacao: processo.quantidade_movimentacoes || 0,
+        dataInicio: processo.data_inicio ? new Date(processo.data_inicio) : null,
+        qdt_movimentacao: processo.quantidade_movimentacoes?.toString() || '0',
         tribunalDesc: fonte.descricao || null,
         area: fonte.capa?.area || null,
         classe: fonte.capa?.classe || null,
         assunto: fonte.capa?.assunto || null,
         orgao_julgador: fonte.capa?.orgao_julgador || null,
+        valor_causa: '0',
+        arquivado: true,
         usuario_id: userData.id,
-        uuid: userData.uuid,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        uuid: userData.uuid
       };
     });
 
