@@ -20,19 +20,31 @@ function handleEmailEnviado(data) {
 </script>
 
 <template>
-  <div class="esquecer-senha-container">
-    <LadoEsquerdoEsquecerSenha 
-      @voltar="handleVoltar"
-      @enviado="handleEmailEnviado"
-    />
-    <LadoDireitoEsquecerSenha />
+  <div class="esquecer-senha-wrapper">
+    <div class="esquecer-senha-container">
+      <LadoEsquerdoEsquecerSenha 
+        @voltar="handleVoltar"
+        @enviado="handleEmailEnviado"
+      />
+      <LadoDireitoEsquecerSenha />
+    </div>
   </div>
 </template>
 
 <style scoped>
+.esquecer-senha-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #FFFFFF;
+}
+
 .esquecer-senha-container {
   display: flex;
   width: 100%;
+  max-width: 1280px;
   height: 100vh;
   overflow: hidden;
 }

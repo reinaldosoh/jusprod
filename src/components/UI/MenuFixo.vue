@@ -16,22 +16,12 @@
 8
 </span>
 </div>
-<div class="flex items-center text-gray-600">
-<Clock class="mr-2 w-5 h-5" />
-<span>Uso 0 de 5 processos</span>
-<div class="mx-2 w-32 h-2 bg-gray-200 rounded-full">
-<div class="h-full w-0 bg-blue-500 rounded-full"></div>
-</div>
-<div class="flex flex-col ml-1">
-<span class="text-xs text-gray-500">Plano atual: Free</span>
-<span class="text-xs text-blue-500 cursor-pointer">Fazer upgrade</span>
-</div>
-</div>
+        <Controlador />
 <div class="flex items-center border-l border-r px-4 py-2 cursor-pointer">
 <div class="bg-gray-100 rounded-full h-8 w-8 flex items-center justify-center text-gray-700 mr-2">
 <span>RE</span>
 </div>
-<div class="flex flex-col">
+<div class="flex flex-col gap-0">
 <span class="text-sm font-medium">Reinaldo C...</span>
 <span class="text-xs text-gray-500">Nome Escritório</span>
 </div>
@@ -107,13 +97,16 @@
 <script lang="ts" setup>
 import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { Bell, Clock, ChevronDown, LogOut } from 'lucide-vue-next';
+import { Bell, ChevronDown, LogOut } from 'lucide-vue-next';
+import Controlador from './Controlador.vue';
 
 const router = useRouter();
 const route = useRoute();
 
 // Detectar a rota atual para destacar o item de menu correto
 const currentPath = computed(() => route.path);
+
+// Removido handleUpgrade - agora é gerenciado pelo próprio componente Controlador
 
 // Função de logout
 const logout = () => {
@@ -404,6 +397,15 @@ input[type="number"] {
 
 .rounded-full {
   border-radius: 9999px;
+}
+
+/* Gap and flex styles - force override */
+.gap-0 {
+  gap: 0 !important;
+}
+
+.flex-col {
+  flex-direction: column !important;
 }
 
 /* Other styles */

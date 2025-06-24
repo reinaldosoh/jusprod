@@ -12,16 +12,28 @@ function handleVoltar() {
 </script>
 
 <template>
-  <div class="reset-password-container">
-    <LadoEsquerdoResetPassword @voltar="handleVoltar" />
-    <LadoDireitoEsquecerSenha />
+  <div class="reset-password-wrapper">
+    <div class="reset-password-container">
+      <LadoEsquerdoResetPassword @voltar="handleVoltar" />
+      <LadoDireitoEsquecerSenha />
+    </div>
   </div>
 </template>
 
 <style scoped>
+.reset-password-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #FFFFFF;
+}
+
 .reset-password-container {
   display: flex;
   width: 100%;
+  max-width: 1280px;
   height: 100vh;
   overflow: hidden;
 }

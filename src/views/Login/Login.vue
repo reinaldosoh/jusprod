@@ -22,21 +22,33 @@ const handleEsqueciSenha = () => {
 </script>
 
 <template>
-  <div class="login-container">
-    <LadoEsquerdo 
-      @login="handleLogin" 
-      @cadastrar="handleCadastrar"
-      @esqueci-senha="handleEsqueciSenha" 
-    />
-    <LadoDireito />
+  <div class="login-wrapper">
+    <div class="login-container">
+      <LadoEsquerdo 
+        @login="handleLogin" 
+        @cadastrar="handleCadastrar"
+        @esqueci-senha="handleEsqueciSenha" 
+      />
+      <LadoDireito />
+    </div>
   </div>
 </template>
 
 <style scoped>
+.login-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  width: 100%;
+  background-color: #FFFFFF;
+}
+
 .login-container {
   display: flex;
   height: 100vh;
   width: 100%;
+  max-width: 1280px;
   background-color: #FFFFFF;
   box-sizing: border-box;
   overflow: hidden;
