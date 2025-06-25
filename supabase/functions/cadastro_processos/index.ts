@@ -51,11 +51,11 @@ Deno.serve(async (req: Request) => {
     }
 
     // Obter dados da requisição
-    const { userUuid, oabEstado, oabNumero } = await req.json();
+    const { userUuid } = await req.json();
     
-    if (!userUuid || !oabEstado || !oabNumero) {
+    if (!userUuid) {
       return new Response(
-        JSON.stringify({ error: 'userUuid, oabEstado e oabNumero são obrigatórios' }),
+        JSON.stringify({ error: 'userUuid é obrigatório' }),
         { status: 400, headers: corsHeaders }
       );
     }
@@ -79,73 +79,107 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log(`Iniciando busca de processos para usuário ${userData.id}, OAB: ${oabEstado}-${oabNumero}`);
+    // Buscar OABs cadastradas do usuário
+    const { data: oabsData, error: oabsError } = await supabase
+      .from('OAB')
+      .select('OAB_num, OAB_uf')
+      .eq('uuid', userUuid);
 
-    let allProcesses: ProcessoEscavador[] = [];
-    let nextUrl = `https://api.escavador.com/api/v2/advogado/processos?oab_estado=${oabEstado}&oab_numero=${oabNumero}`;
-    let pageCount = 0;
-
-    // Loop para buscar todas as páginas
-    while (nextUrl && pageCount < 50) { // Limite de segurança de 50 páginas
-      pageCount++;
-      console.log(`Buscando página ${pageCount}: ${nextUrl}`);
-
-      const response = await fetch(nextUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${ESCAVADOR_API_TOKEN}`,
-          'X-Requested-With': 'XMLHttpRequest',
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        console.error(`Erro na API do Escavador (página ${pageCount}):`, response.status, response.statusText);
-        const errorText = await response.text();
-        console.error('Resposta do erro:', errorText);
-        
-        if (pageCount === 1) {
-          // Se falhou na primeira página, retorna erro
-          return new Response(
-            JSON.stringify({ 
-              error: `Erro na API do Escavador: ${response.status}`,
-              details: errorText
-            }),
-            { status: 500, headers: corsHeaders }
-          );
-        } else {
-          // Se falhou em páginas subsequentes, para o loop mas processa o que já foi coletado
-          console.log(`Falha na página ${pageCount}, processando ${allProcesses.length} processos coletados até agora`);
-          break;
-        }
-      }
-
-      const data: EscavadorResponse = await response.json();
-      
-      if (data.items && data.items.length > 0) {
-        allProcesses = allProcesses.concat(data.items);
-        console.log(`Página ${pageCount}: coletados ${data.items.length} processos. Total: ${allProcesses.length}`);
-      }
-
-      // Verificar se há próxima página
-      nextUrl = data.links?.next || null;
-      
-      if (!nextUrl) {
-        console.log(`Fim da paginação na página ${pageCount}`);
-        break;
-      }
-
-      // Pequeno delay para não sobrecarregar a API
-      await new Promise(resolve => setTimeout(resolve, 100));
+    if (oabsError) {
+      console.error('Erro ao buscar OABs:', oabsError);
+      return new Response(
+        JSON.stringify({ error: 'Erro ao buscar OABs do usuário' }),
+        { status: 500, headers: corsHeaders }
+      );
     }
 
-    console.log(`Busca finalizada. Total de processos coletados: ${allProcesses.length}`);
+    if (!oabsData || oabsData.length === 0) {
+      console.log('Nenhuma OAB encontrada para o usuário');
+      return new Response(
+        JSON.stringify({ 
+          message: 'Nenhuma OAB cadastrada para este usuário',
+          processosInseridos: 0,
+          oabsProcessadas: 0
+        }),
+        { status: 200, headers: corsHeaders }
+      );
+    }
+
+    console.log(`Iniciando busca de processos para usuário ${userData.id} com ${oabsData.length} OAB(s)`);
+
+    let allProcesses: ProcessoEscavador[] = [];
+    let oabsProcessadas = 0;
+
+    // Loop para processar cada OAB
+    for (const oab of oabsData) {
+      console.log(`Processando OAB: ${oab.OAB_num}/${oab.OAB_uf}`);
+      
+      let nextUrl = `https://api.escavador.com/api/v2/advogado/processos?oab_estado=${oab.OAB_uf}&oab_numero=${oab.OAB_num}`;
+      let pageCount = 0;
+      
+      // Loop para buscar todas as páginas desta OAB
+      while (nextUrl && pageCount < 50) { // Limite de segurança de 50 páginas
+        pageCount++;
+        console.log(`OAB ${oab.OAB_num}/${oab.OAB_uf} - Página ${pageCount}: ${nextUrl}`);
+
+        const response = await fetch(nextUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${ESCAVADOR_API_TOKEN}`,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          console.error(`Erro na API do Escavador para OAB ${oab.OAB_num}/${oab.OAB_uf} (página ${pageCount}):`, response.status, response.statusText);
+          const errorText = await response.text();
+          console.error('Resposta do erro:', errorText);
+          
+          if (pageCount === 1) {
+            // Se falhou na primeira página desta OAB, pula para a próxima OAB
+            console.log(`Pulando OAB ${oab.OAB_num}/${oab.OAB_uf} devido a erro na primeira página`);
+            break;
+          } else {
+            // Se falhou em páginas subsequentes, para o loop mas processa o que já foi coletado
+            console.log(`Falha na página ${pageCount} da OAB ${oab.OAB_num}/${oab.OAB_uf}, processando o que foi coletado`);
+            break;
+          }
+        }
+
+        const data: EscavadorResponse = await response.json();
+        
+        if (data.items && data.items.length > 0) {
+          allProcesses = allProcesses.concat(data.items);
+          console.log(`OAB ${oab.OAB_num}/${oab.OAB_uf} - Página ${pageCount}: coletados ${data.items.length} processos. Total geral: ${allProcesses.length}`);
+        }
+
+        // Verificar se há próxima página
+        nextUrl = data.links?.next || null;
+        
+        if (!nextUrl) {
+          console.log(`OAB ${oab.OAB_num}/${oab.OAB_uf} - Fim da paginação na página ${pageCount}`);
+          break;
+        }
+
+        // Pequeno delay para não sobrecarregar a API
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      oabsProcessadas++;
+      
+      // Delay entre OABs
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+
+    console.log(`Busca finalizada. Total de processos coletados: ${allProcesses.length} de ${oabsProcessadas} OAB(s)`);
 
     if (allProcesses.length === 0) {
       return new Response(
         JSON.stringify({ 
-          message: 'Nenhum processo encontrado para esta OAB',
-          processosInseridos: 0
+          message: 'Nenhum processo encontrado para as OABs cadastradas',
+          processosInseridos: 0,
+          oabsProcessadas: oabsProcessadas
         }),
         { status: 200, headers: corsHeaders }
       );
@@ -215,7 +249,7 @@ Deno.serve(async (req: Request) => {
         processosColetados: allProcesses.length,
         processosInseridos: totalInseridos,
         errosInsercao: errosInsercao,
-        paginasProcessadas: pageCount
+        oabsProcessadas: oabsProcessadas
       }),
       { status: 200, headers: corsHeaders }
     );

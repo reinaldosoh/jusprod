@@ -10,23 +10,79 @@ export const processoService = {
    */
   async obterStatusProcessos() {
     try {
-      const { data, error } = await supabase.functions.invoke('gerenciar-processo', {
-        body: { acao: 'status' }
-      });
-
-      if (error) {
-        console.error('Erro ao obter status dos processos:', error);
-        throw new Error('Erro ao carregar status dos processos');
+      console.log('🔄 Obtendo status dos processos...');
+      
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
+        throw new Error('Usuário não autenticado');
       }
 
-      if (!data.success) {
-        throw new Error(data.error || 'Erro desconhecido ao obter status');
+      console.log('👤 Usuário autenticado:', user.id);
+
+      // Contar processos ativos (não arquivados)
+      const { count: processosAtivos, error: countError } = await supabase
+        .from('processos')
+        .select('*', { count: 'exact', head: true })
+        .eq('uuid', user.id)
+        .eq('arquivado', false);
+
+      if (countError) {
+        console.error('❌ Erro ao contar processos ativos:', countError);
+        throw countError;
       }
 
-      return data.data;
+      console.log('📊 Processos ativos contados:', processosAtivos);
+
+      // Buscar dados do usuário para obter o plano (tabela correta: 'usuario')
+      const { data: userData, error: userError } = await supabase
+        .from('usuario')
+        .select('role_atual')
+        .eq('uuid', user.id)
+        .single();
+
+      if (userError) {
+        console.log('⚠️ Erro ao buscar plano do usuário, usando Free como padrão:', userError);
+      }
+
+      const plano = userData?.role_atual || 'free';
+      console.log('📋 Plano do usuário:', plano);
+      
+      // Definir limites por plano
+      const limitesPorPlano = {
+        free: 5,
+        silver: 45,
+        gold: 150,
+        platinum: 350
+      };
+
+      const maxProcessos = limitesPorPlano[plano.toLowerCase()] || 5;
+      const processosDisponiveis = maxProcessos - (processosAtivos || 0);
+
+      const status = {
+        processos_ativos: processosAtivos || 0,
+        max_processos: maxProcessos,
+        processos_disponiveis: Math.max(0, processosDisponiveis),
+        pode_ativar_processo: processosDisponiveis > 0,
+        plano_nome: plano
+      };
+
+      console.log('✅ Status calculado:', status);
+      return status;
+
     } catch (error) {
-      console.error('Erro no obterStatusProcessos:', error);
-      throw error;
+      console.error('❌ Erro ao obter status:', error);
+      
+      // Retornar valores padrão em caso de erro total
+      const statusDefault = {
+        processos_ativos: 0,
+        max_processos: 5,
+        processos_disponiveis: 5,
+        pode_ativar_processo: true,
+        plano_nome: 'free'
+      };
+      
+      console.log('🔄 Retornando status padrão:', statusDefault);
+      return statusDefault;
     }
   },
 
@@ -278,6 +334,83 @@ export const processoService = {
     } catch (error) {
       console.error('Erro ao verificar se pode ativar processo:', error);
       return false;
+    }
+  },
+
+  /**
+   * Monitora um processo usando integração com Escavador
+   * Faz todas as chamadas necessárias e cadastra intimações
+   * @param {number} processoId - ID do processo
+   * @returns {Promise<Object>} Resultado da operação
+   */
+  async monitorarProcesso(processoId) {
+    try {
+      console.log('🔄 Monitorando processo:', processoId);
+      
+      const { data, error } = await supabase.functions.invoke('monitorar-processo', {
+        body: { 
+          processo_id: parseInt(processoId)
+        }
+      });
+
+      if (error) {
+        console.error('Erro detalhado da edge function:', error);
+        console.error('Status:', error.status);
+        console.error('Message:', error.message);
+        console.error('Context:', error.context);
+        
+        // Primeira tentativa: verificar se já temos dados no error.message
+        if (error.message && error.message.includes('não encontrado')) {
+          throw new Error('Processo não foi encontrado na base de dados do Escavador. Verifique se o número do CNJ está correto.');
+        }
+        
+        // Segunda tentativa: tentar extrair dados do contexto SEM LER O BODY DUAS VEZES
+        if (error.context && error.context.status) {
+          const status = error.context.status;
+          
+          if (status === 404) {
+            throw new Error('Processo não foi encontrado na base de dados do Escavador. Verifique se o número do CNJ está correto.');
+          }
+          
+          if (status === 400) {
+            throw new Error('Dados do processo inválidos. Verifique as informações fornecidas.');
+          }
+          
+          if (status === 429) {
+            throw new Error('Limite de requisições atingido. Tente novamente em alguns minutos.');
+          }
+          
+          if (status === 500) {
+            throw new Error('Erro interno do servidor. Tente novamente mais tarde.');
+          }
+          
+          throw new Error(`Erro na consulta ao Escavador (${status}). Tente novamente.`);
+        }
+        
+        throw new Error(`Erro na edge function: ${error.message || 'Erro desconhecido'}`);
+      }
+
+      if (!data || !data.success) {
+        if (data && data.codigo === 'LIMITE_ATINGIDO') {
+          throw new Error(data.error || 'Limite de processos atingido para seu plano atual.');
+        }
+        
+        if (data && data.codigo === 'PROCESSO_NAO_ENCONTRADO_ESCAVADOR') {
+          throw new Error('Processo não foi encontrado na base de dados do Escavador. Verifique se o número do CNJ está correto.');
+        }
+        
+        throw new Error(data?.error || 'Erro desconhecido ao monitorar processo');
+      }
+
+      console.log('✅ Processo monitorado com sucesso');
+      return {
+        success: true,
+        message: data.message,
+        data: data.data
+      };
+    } catch (error) {
+      console.error('❌ Erro ao monitorar processo:', error);
+      throw error;
     }
   },
 

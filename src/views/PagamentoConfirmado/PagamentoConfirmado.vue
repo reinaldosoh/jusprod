@@ -85,7 +85,7 @@
         <!-- Título de sucesso -->
         <h1 class="success-title">
           {{ onboardingCompleted ? 'Conta configurada com sucesso!' : 'Pagamento Confirmado!' }}
-        </h1>
+      </h1>
 
         <!-- Mensagem principal -->
         <p class="success-message">
@@ -93,7 +93,7 @@
             ? `Perfeito! Encontramos e importamos ${processosEncontrados} processos de ${oabsProcessadas} OAB(s). Sua conta está pronta para uso.`
             : 'Seu pagamento foi processado com sucesso. Bem-vindo ao Jusprod!'
           }}
-        </p>
+      </p>
 
         <!-- Cards de estatísticas -->
         <div v-if="onboardingCompleted" class="stats-grid">
@@ -128,7 +128,7 @@
               </ul>
             </div>
           </div>
-        </div>
+      </div>
 
         <!-- Botões de ação -->
         <div class="action-buttons">
@@ -139,8 +139,8 @@
               <line x1="9" y1="15" x2="15" y2="15"/>
             </svg>
             Acessar Dashboard
-          </button>
-          
+      </button>
+
           <button @click="irParaProcessos" class="btn-secondary">
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -156,12 +156,12 @@
         <!-- Suporte -->
         <div class="support-section">
           <p class="support-text">
-            Precisa de ajuda? 
+        Precisa de ajuda? 
             <a href="mailto:suporte@jusprod.com" class="support-link">
               Entre em contato com nosso suporte
-            </a>
-          </p>
-        </div>
+        </a>
+      </p>
+    </div>
       </div>
     </main>
   </div>
@@ -233,7 +233,7 @@ const executarOnboarding = async () => {
 
     updateProgress(3, 'Importando processos do Escavador...', 'Processando dados...')
 
-    // Chamar a edge function para buscar processos
+    // Chamar a edge function para buscar processos (ela fará a busca das OABs internamente)
     const { data, error } = await supabase.functions.invoke('cadastro_processos', {
       body: {
         userUuid: user.id
@@ -247,12 +247,12 @@ const executarOnboarding = async () => {
     }
 
     console.log('Onboarding concluído:', data)
+    processosEncontrados.value = data.processosInseridos || 0
+    oabsProcessadas.value = data.oabsProcessadas || 0
     
     updateProgress(4, 'Finalizando configuração...', 'Quase pronto...')
     await new Promise(resolve => setTimeout(resolve, 1000))
     
-    processosEncontrados.value = data.processosInseridos || 0
-    oabsProcessadas.value = data.oabsProcessadas || 0
     onboardingCompleted.value = true
     
   } catch (error) {

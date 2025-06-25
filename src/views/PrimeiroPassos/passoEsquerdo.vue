@@ -13,8 +13,8 @@ function buscarProcessosAutomaticamente() {
 
 // Função para começar teste grátis com busca manual
 function comecarTesteManual() {
-  console.log('Começando teste grátis com busca manual...');
-  // Implementar lógica de teste manual
+  console.log('Começando teste grátis com busca manual, redirecionando para dashboard...');
+  router.push({ name: 'dashboard' });
 }
 
 // Função para assistir vídeo

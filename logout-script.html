@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Logout Script</title>
+</head>
+<body>
+    <h1>Script de Logout</h1>
+    <button onclick="logout()">DESLOGAR USUÁRIO</button>
+    <div id="status"></div>
+
+    <script type="module">
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+        
+        const supabaseUrl = 'https://gxafrqpfwjzedmnqmjmt.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd4YWZycXBmd2p6ZWRtbnFtam10Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzE4NjQ5NzEsImV4cCI6MjA0NzQ0MDk3MX0.0bUyHhzqJJ5g4CGQO5VfFRHf5GsE0vfH_s2X5HNy-YQ'
+        
+        const supabase = createClient(supabaseUrl, supabaseKey)
+        
+        window.logout = async function() {
+            const status = document.getElementById('status')
+            
+            try {
+                status.innerHTML = '🔄 Fazendo logout...'
+                
+                // Obter usuário atual
+                const { data: { user } } = await supabase.auth.getUser()
+                
+                if (user) {
+                    status.innerHTML += `<br>👤 Usuário encontrado: ${user.email}`
+                    
+                    // Limpar cache do localStorage
+                    localStorage.removeItem(`email_status_${user.id}`)
+                    localStorage.removeItem(`onboarding_status_${user.id}`)
+                    status.innerHTML += '<br>🧹 Cache limpo do localStorage'
+                }
+                
+                // Fazer logout
+                const { error } = await supabase.auth.signOut()
+                
+                if (error) {
+                    status.innerHTML += `<br>❌ Erro: ${error.message}`
+                } else {
+                    status.innerHTML += '<br>✅ Logout realizado com sucesso!'
+                    status.innerHTML += '<br>🎉 Agora você pode acessar o sistema normalmente'
+                }
+                
+            } catch (error) {
+                status.innerHTML += `<br>❌ Erro: ${error.message}`
+            }
+        }
+    </script>
+</body>
+</html> 

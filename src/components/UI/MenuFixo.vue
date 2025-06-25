@@ -27,7 +27,7 @@
 </div>
 <ChevronDown class="ml-2 text-gray-400 w-4 h-4" />
 </div>
-<div @click="logout" class="flex items-center text-blue-500 cursor-pointer">
+<div @click="abrirModalLogout" class="flex items-center text-blue-500 cursor-pointer">
 <LogOut class="mr-1 w-5 h-5" />
 <span>Sair</span>
 </div>
@@ -92,6 +92,12 @@
 </div>
 </main>
 </div>
+
+<!-- Modal de Logout -->
+<Logout 
+  :visible="modalLogoutVisivel" 
+  @fechar="fecharModalLogout"
+/>
 </template>
 
 <script lang="ts" setup>
@@ -99,12 +105,28 @@ import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { Bell, ChevronDown, LogOut } from 'lucide-vue-next';
 import Controlador from './Controlador.vue';
+import Logout from './Logout.vue';
 
 const router = useRouter();
 const route = useRoute();
 
 // Detectar a rota atual para destacar o item de menu correto
 const currentPath = computed(() => route.path);
+
+// Estado para controlar a visibilidade do modal de logout
+const modalLogoutVisivel = ref(false);
+
+// Função para abrir o modal de logout
+const abrirModalLogout = () => {
+  modalLogoutVisivel.value = true;
+};
+
+// Função para fechar o modal de logout
+const fecharModalLogout = () => {
+  modalLogoutVisivel.value = false;
+};
+
+// Logout agora é gerenciado diretamente pelo componente Logout.vue
 
 // Removido handleUpgrade - agora é gerenciado pelo próprio componente Controlador
 
@@ -171,12 +193,9 @@ return 'bg-gray-100 text-gray-800';
 };
 </script>
 <style>
-/* Import Inter font */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-/* Apply Inter font to all elements */
+/* Apply system font for better performance */
 * {
-  font-family: 'Inter', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* Navigation menu styles */
@@ -289,6 +308,10 @@ input[type="number"] {
   background-color: #e5e7eb;
 }
 
+.bg-gray-300 {
+  background-color: #d1d5db;
+}
+
 .bg-blue-500 {
   background-color: #3b82f6;
 }
@@ -324,6 +347,14 @@ input[type="number"] {
 
 .w-32 {
   width: 8rem;
+}
+
+.w-40 {
+  width: 10rem;
+}
+
+.h-3 {
+  height: 0.75rem;
 }
 
 .max-w-\[1280px\] {
@@ -397,6 +428,22 @@ input[type="number"] {
 
 .rounded-full {
   border-radius: 9999px;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.transition-all {
+  transition: all 0.3s ease;
+}
+
+.duration-500 {
+  transition-duration: 500ms;
+}
+
+.ease-out {
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
 }
 
 /* Gap and flex styles - force override */

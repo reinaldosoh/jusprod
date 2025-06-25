@@ -124,23 +124,51 @@ async function handleLogin() {
       .eq('uuid', userData.user.id)
       .single();
     
-    if (onboardingError && onboardingError.code !== 'PGRST116') {
-      console.error('❌ Erro ao verificar onboarding:', onboardingError);
-      // Se não conseguiu verificar, assumir que não fez onboarding
-    }
+    console.log('🎯 Status do onboarding:', { data: onboardingData, error: onboardingError });
     
-    console.log('🎯 Status do onboarding:', onboardingData);
+    // Verificação específica: se não há registro OU se finalizado não é true
+    const naoTemRegistro = onboardingError?.code === 'PGRST116';
+    const naoFinalizado = !naoTemRegistro && (!onboardingData || onboardingData.finalizado !== true);
+    const outroErro = onboardingError && onboardingError.code !== 'PGRST116';
     
-    // Se não há registro de onboarding ou não foi finalizado, redirecionar para onboarding
-    if (!onboardingData || !onboardingData.finalizado) {
-      console.log('⚠️ Onboarding não finalizado, redirecionando para tutorial...');
+    console.log('🔍 Análise onboarding:', {
+      naoTemRegistro,
+      naoFinalizado,
+      outroErro,
+      dadosOnboarding: onboardingData,
+      codigoErro: onboardingError?.code
+    });
+    
+    if (naoTemRegistro || naoFinalizado || outroErro) {
+      if (naoTemRegistro) {
+        console.log('⚠️ Usuário não possui registro de onboarding');
+      } else if (naoFinalizado) {
+        console.log('⚠️ Onboarding existe mas não foi finalizado:', onboardingData);
+      } else if (outroErro) {
+        console.log('❌ Erro ao verificar onboarding:', onboardingError);
+      }
       
-      // Redirecionar para página de onboarding
+      console.log('🔄 Redirecionando para onboarding...');
       router.push({ name: 'onboarding' });
       return;
     }
     
     console.log('✅ Onboarding finalizado, redirecionando para dashboard...');
+    
+    // Salvar status no cache para evitar verificações futuras
+    localStorage.setItem(`email_status_${userData.user.id}`, JSON.stringify({
+      value: true,
+      timestamp: Date.now(),
+      permanent: true
+    }));
+    
+    localStorage.setItem(`onboarding_status_${userData.user.id}`, JSON.stringify({
+      value: true,
+      timestamp: Date.now(), 
+      permanent: true
+    }));
+    
+    console.log('💾 Status salvos no cache permanente');
     
     // Email validado - se teve erro de login por email não confirmado, tentar login novamente
     if (loginError && loginError.message && loginError.message.includes('email_not_confirmed')) {

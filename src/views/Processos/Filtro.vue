@@ -11,9 +11,7 @@
               <circle cx="11" cy="11" r="8"/>
               <path d="m21 21-4.35-4.35"/>
             </svg>
-            <div v-else class="search-loading">
-              <div class="mini-spinner"></div>
-            </div>
+            <div v-else class="spinner"></div>
             <input 
               type="text" 
               placeholder="Pesquisar processo"
@@ -23,9 +21,6 @@
               @keyup.enter="handleSearch"
             />
           </div>
-          <button class="search-button" @click="handleSearch">
-            Pesquisar
-          </button>
         </div>
         
         <!-- Botão Novo Processo -->
@@ -167,29 +162,7 @@ const handleSearch = () => {
   color: #9ca3af;
 }
 
-.search-button {
-  height: 40px;
-  padding: 0 1.25rem;
-  background: #3b82f6;
-  border: 1px solid #3b82f6;
-  border-radius: 6px;
-  color: white;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  white-space: nowrap;
-}
-
-.search-button:hover {
-  background: #2563eb;
-  border-color: #2563eb;
-}
-
-.search-button:active {
-  transform: translateY(0.5px);
-}
+/* Botão de pesquisa removido */
 
 .new-process-button {
   display: flex;
@@ -277,7 +250,6 @@ const handleSearch = () => {
     width: 100%;
   }
   
-  .search-button,
   .new-process-button {
     width: 100%;
     justify-content: center;

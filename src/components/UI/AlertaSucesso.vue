@@ -49,7 +49,8 @@ defineEmits(['fechar']);
 
 .alerta-sucesso {
   width: 374px;
-  height: 160px;
+  min-height: 160px;
+  max-height: 80vh;
   background-color: white;
   border-radius: 16px;
   box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
@@ -58,12 +59,14 @@ defineEmits(['fechar']);
   padding: 16px;
   box-sizing: border-box;
   z-index: 1001;
+  overflow-y: auto;
 }
 
 .alerta-conteudo {
   display: flex;
   gap: 16px;
   margin-bottom: 16px;
+  flex: 1;
 }
 
 .icone-container {
@@ -96,6 +99,9 @@ defineEmits(['fechar']);
   font-size: 14px;
   margin: 0;
   color: #666666;
+  line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .botao-container {
@@ -125,6 +131,7 @@ defineEmits(['fechar']);
   .alerta-sucesso {
     width: calc(100vw - 32px);
     max-width: 340px;
+    max-height: 90vh;
     margin: 16px;
   }
   
@@ -140,7 +147,11 @@ defineEmits(['fechar']);
   
   .mensagem-container p {
     font-size: 13px;
-    line-height: 1.4;
+    line-height: 1.5;
+  }
+  
+  .alerta-conteudo {
+    margin-bottom: 20px;
   }
 }
 </style>

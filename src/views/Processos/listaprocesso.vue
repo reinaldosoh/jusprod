@@ -42,7 +42,7 @@
       >
         <!-- Ícone da Balança -->
         <div class="processo-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="balance-icon">
+          <svg viewBox="0 0 24 24" fill="none" :stroke="activeTab === 'monitorados' ? '#EF4444' : 'currentColor'" class="balance-icon">
             <!-- Haste vertical central -->
             <line x1="12" y1="3" x2="12" y2="21"/>
             <!-- Base -->
@@ -108,18 +108,63 @@
           <button 
             v-if="activeTab === 'nao-monitorados'"
             class="btn-monitorar"
+            :class="{ 
+              'loading': processosMonitorando.has(processo.id),
+              'disabled': algumProcessoMonitorando && !processosMonitorando.has(processo.id),
+              'limite-atingido': atingiuLimite
+            }"
+            :disabled="algumProcessoMonitorando"
             @click.stop="monitorarProcesso(processo)"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="monitor-icon">
+            <!-- Loading Spinner -->
+            <div v-if="processosMonitorando.has(processo.id)" class="loading-spinner-btn"></div>
+            
+            <!-- Ícone normal -->
+            <svg 
+              v-else
+              viewBox="0 0 24 24" 
+              fill="none" 
+              stroke="currentColor" 
+              class="monitor-icon"
+            >
               <!-- Pasta -->
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
               <!-- Sinal de + -->
               <line x1="12" y1="10" x2="12" y2="16"/>
               <line x1="9" y1="13" x2="15" y2="13"/>
             </svg>
-            Monitorar Processo
+            
+            {{ 
+              processosMonitorando.has(processo.id) 
+                ? 'Monitorando...' 
+                : algumProcessoMonitorando && !processosMonitorando.has(processo.id)
+                  ? 'Aguarde outro processo...'
+                  : atingiuLimite
+                    ? 'Fazer Upgrade'
+                    : 'Monitorar Processo' 
+            }}
           </button>
-          <span v-else class="status-monitorado">Monitorado</span>
+          <div v-else class="status-monitorado">
+            <!-- Ícone de Calendário -->
+            <img src="/images/iconcalendar.svg" alt="Calendário" class="status-icon" />
+            
+            <!-- Ícone de Editar -->
+            <img src="/images/iconEditar.svg" alt="Editar" class="status-icon" />
+            
+            <!-- Ícone de WhatsApp -->
+            <img src="/images/iconWhats.svg" alt="WhatsApp" class="status-icon" />
+            
+            <!-- Ícone de Email -->
+            <img src="/images/iconEmail.svg" alt="Email" class="status-icon" />
+            
+            <!-- Ícone de Mais -->
+            <img 
+              src="/images/iconMais.svg" 
+              alt="Mais opções" 
+              class="status-icon status-icon-mais" 
+              @click="mostrarAcoes(processo.id, $event)"
+            />
+          </div>
         </div>
       </div>
 
@@ -171,12 +216,50 @@
         Mostrando {{ inicioItem }} - {{ fimItem }} de {{ processosFiltrados.length }} processos
       </div>
     </div>
+
+    <!-- Alerta de Sucesso -->
+    <AlertaSucesso 
+      v-if="mostrarAlertaSucesso"
+      mensagem="Processo monitorado com sucesso! As intimações serão exibidas na seção de Intimações."
+      @fechar="mostrarAlertaSucesso = false"
+    />
+
+    <!-- Alerta de Erro -->
+    <AlertaErro 
+      v-if="mostrarAlertaErro"
+      :titulo="tituloErro"
+      :mensagem="mensagemErro"
+      @fechar="mostrarAlertaErro = false"
+    />
+
+    <!-- Modal Upgrade -->
+    <Upgrade 
+      :show="mostrarUpgrade"
+      @close="mostrarUpgrade = false"
+      @upgrade="handleUpgrade"
+      @not-now="mostrarUpgrade = false"
+    />
+
+    <!-- Dropdown de Ações -->
+    <acoesProcessos
+      :show="acoesDropdown.show"
+      :posicao="acoesDropdown.posicao"
+      @close="fecharAcoes"
+      @vincular-clientes="handleVincularClientes"
+      @exportar="handleExportar"
+      @deixar-monitorar="handleDeixarMonitorar"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { supabase } from '../../lib/supabase'
+import AlertaSucesso from '../../components/UI/AlertaSucesso.vue'
+import AlertaErro from '../../components/UI/AlertaErro.vue'
+import Upgrade from '../../components/UI/Upgrade.vue'
+import acoesProcessos from '../../components/UI/acoesProcessos.vue'
+import { eventBus, EVENTS } from '../../utils/eventBus'
 
 const props = defineProps({
   searchTerm: {
@@ -191,6 +274,15 @@ const loading = ref(false)
 const paginaAtual = ref(1)
 const itensPorPagina = 20
 const processosExpandidos = ref([])
+const mostrarAlertaSucesso = ref(false)
+const mostrarAlertaErro = ref(false)
+const mensagemErro = ref('')
+const tituloErro = ref('Erro')
+const processosMonitorando = ref(new Set()) // IDs dos processos sendo monitorados
+const algumProcessoMonitorando = computed(() => processosMonitorando.value.size > 0) // Verifica se algum processo está sendo monitorado
+const mostrarUpgrade = ref(false)
+const limitePlan = ref({ atual: 0, maximo: 0, plano: '' })
+const acoesDropdown = ref({ show: false, processoId: null, posicao: null }) // Estado do dropdown de ações
 let searchTimeout = null
 
 // Computed para filtrar processos
@@ -265,6 +357,11 @@ const fimItem = computed(() => {
   return Math.min(fim, processosFiltrados.value.length)
 })
 
+// Computed para verificar se atingiu o limite
+const atingiuLimite = computed(() => {
+  return limitePlan.value.atual >= limitePlan.value.maximo
+})
+
 // Funções
 const setActiveTab = (tab) => {
   activeTab.value = tab
@@ -294,21 +391,140 @@ const formatarData = (data) => {
 }
 
 const monitorarProcesso = async (processo) => {
+  // Verificar se atingiu o limite do plano
+  if (atingiuLimite.value) {
+    console.log('⚠️ Limite do plano atingido. Mostrando modal de upgrade.')
+    mostrarUpgrade.value = true
+    return
+  }
+
+  // Verificar se algum processo já está sendo monitorado (apenas um por vez)
+  if (algumProcessoMonitorando.value) {
+    console.log('⚠️ Outro processo já está sendo monitorado. Aguarde a conclusão.')
+    return
+  }
+
+  // Verificar se o processo específico já está sendo monitorado
+  if (processosMonitorando.value.has(processo.id)) {
+    console.log('⚠️ Processo já está sendo monitorado:', processo.id)
+    return
+  }
+
   try {
-    const { error } = await supabase
-      .from('processos')
-      .update({ arquivado: false })
-      .eq('id', processo.id)
-
-    if (error) throw error
-
-    // Atualizar localmente
-    const index = processos.value.findIndex(p => p.id === processo.id)
-    if (index !== -1) {
-      processos.value[index].arquivado = false
-    }
+    // Adicionar o processo à lista de monitoramento
+    processosMonitorando.value.add(processo.id)
+    
+    console.log('🔄 Iniciando monitoramento do processo:', processo.id)
+    
+    // Importar o serviço dinamicamente
+    const { processoService } = await import('../../services/processoService')
+    
+    // Chamar a função de monitoramento
+    const resultado = await processoService.monitorarProcesso(processo.id)
+    
+    console.log('✅ Processo monitorado com sucesso:', resultado)
+    
+    // Recarregar a lista completa do banco para garantir dados atualizados
+    await carregarProcessos(props.searchTerm)
+    
+    // Recarregar o limite do plano para atualizar contador
+    await carregarLimitePlano()
+    
+    // Emitir evento para atualizar outros componentes (como o Controlador)
+    eventBus.emit(EVENTS.PROCESSO_MONITORADO, {
+      processoId: processo.id,
+      resultado: resultado
+    })
+    
+    console.log('📢 Evento PROCESSO_MONITORADO emitido para atualizar Controlador')
+    
+    // Mostrar alerta de sucesso
+    mostrarAlertaSucesso.value = true
+    
   } catch (error) {
-    console.error('Erro ao monitorar processo:', error)
+    console.error('❌ Erro ao monitorar processo:', error)
+    
+    // Configurar título e mensagem baseado no tipo de erro
+    if (error.message.includes('não foi encontrado na base de dados do Escavador')) {
+      tituloErro.value = 'CNJ não encontrado'
+      mensagemErro.value = error.message
+    } else if (error.message.includes('limite') || error.message.includes('Limite')) {
+      tituloErro.value = 'Limite atingido'
+      mensagemErro.value = error.message
+    } else if (error.message.includes('Dados do processo inválidos')) {
+      tituloErro.value = 'Dados inválidos'
+      mensagemErro.value = error.message
+    } else if (error.message.includes('concorrência')) {
+      tituloErro.value = 'Processo em andamento'
+      mensagemErro.value = 'O processo está sendo monitorado por outra operação. Aguarde alguns segundos e tente novamente.'
+    } else {
+      tituloErro.value = 'Erro ao monitorar'
+      mensagemErro.value = error.message || 'Erro ao monitorar processo. Tente novamente.'
+    }
+    
+    // Mostrar alerta de erro
+    mostrarAlertaErro.value = true
+  } finally {
+    // Remover o processo da lista de monitoramento
+    processosMonitorando.value.delete(processo.id)
+    console.log('🏁 Finalizando monitoramento do processo:', processo.id)
+  }
+}
+
+const carregarLimitePlano = async () => {
+  try {
+    // Obter usuário autenticado
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      console.error('❌ Erro ao obter usuário autenticado:', authError)
+      return
+    }
+
+    // Buscar informações do plano do usuário
+    const { data: userData, error: userError } = await supabase
+      .from('usuario')
+      .select('role_atual')
+      .eq('uuid', user.id)
+      .single()
+
+    if (userError) {
+      console.error('❌ Erro ao buscar plano do usuário:', userError)
+      return
+    }
+
+    // Contar processos ativos (monitorados)
+    const { count: processosAtivos, error: countError } = await supabase
+      .from('processos')
+      .select('*', { count: 'exact', head: true })
+      .eq('uuid', user.id)
+      .eq('arquivado', false)
+
+    if (countError) {
+      console.error('❌ Erro ao contar processos ativos:', countError)
+      return
+    }
+
+    // Definir limites por plano
+    const limitesPorPlano = {
+      free: 5,
+      silver: 45,
+      gold: 150,
+      platinum: 350
+    }
+
+    const plano = userData.role_atual || 'free'
+    const maximo = limitesPorPlano[plano] || 5
+
+    limitePlan.value = {
+      atual: processosAtivos || 0,
+      maximo: maximo,
+      plano: plano
+    }
+
+    console.log('📊 Limite do plano carregado:', limitePlan.value)
+  } catch (error) {
+    console.error('❌ Erro ao carregar limite do plano:', error)
   }
 }
 
@@ -317,9 +533,20 @@ const carregarProcessos = async (searchTerm = '') => {
   console.log('🔍 Carregando processos com termo:', searchTerm)
   
   try {
+    // Obter usuário autenticado
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
+      console.error('❌ Erro ao obter usuário autenticado:', authError)
+      throw new Error('Usuário não autenticado')
+    }
+
+    console.log('👤 Carregando processos para usuário:', user.id)
+
     let query = supabase
       .from('processos')
       .select('*')
+      .eq('uuid', user.id) // FILTRO ESSENCIAL: apenas processos do usuário autenticado
 
     // Se houver termo de busca, aplicar filtros de busca
     if (searchTerm && searchTerm.trim()) {
@@ -329,7 +556,7 @@ const carregarProcessos = async (searchTerm = '') => {
       // Usar sintaxe correta do Supabase para OR
       query = query.or(`cnpj.ilike.%${termo}%,autor.ilike.%${termo}%,reu.ilike.%${termo}%,tribunal.ilike.%${termo}%,area.ilike.%${termo}%,assunto.ilike.%${termo}%,classe.ilike.%${termo}%,orgao_julgador.ilike.%${termo}%`)
     } else {
-      console.log('🔍 Carregando todos os processos (sem filtro)')
+      console.log('🔍 Carregando todos os processos do usuário (sem filtro de texto)')
     }
 
     const { data, error } = await query
@@ -357,6 +584,7 @@ const carregarProcessos = async (searchTerm = '') => {
         const { data } = await supabase
           .from('processos')
           .select('*')
+          .eq('uuid', user.id) // FILTRO ESSENCIAL: apenas processos do usuário autenticado
           .order('created_at', { ascending: false })
           .limit(1000)
         
@@ -370,6 +598,87 @@ const carregarProcessos = async (searchTerm = '') => {
   } finally {
     loading.value = false
   }
+}
+
+const handleUpgrade = () => {
+  // Redirecionar para a página de planos
+  // Usar router se disponível ou window.location
+  if (window?.location) {
+    window.location.href = '/planos'
+  }
+  mostrarUpgrade.value = false
+}
+
+// Funções para controlar o dropdown de ações
+const mostrarAcoes = (processoId, event) => {
+  event.stopPropagation()
+  
+  // Calcular posição do dropdown baseado na posição do ícone clicado
+  const rect = event.target.getBoundingClientRect()
+  const posicao = {
+    top: rect.bottom + 6, // 6px abaixo do ícone
+    left: rect.left
+  }
+  
+  acoesDropdown.value = { 
+    show: true, 
+    processoId,
+    posicao
+  }
+}
+
+const fecharAcoes = () => {
+  acoesDropdown.value = { show: false, processoId: null, posicao: null }
+}
+
+const handleVincularClientes = () => {
+  console.log('Vincular clientes para processo:', acoesDropdown.value.processoId)
+  // TODO: Implementar funcionalidade de vincular clientes
+  fecharAcoes()
+}
+
+const handleExportar = async () => {
+  try {
+    const processoId = acoesDropdown.value.processoId
+    console.log('Exportar processo:', processoId)
+    
+    // Encontrar o processo na lista atual
+    const processo = processos.value.find(p => p.id === processoId)
+    
+    if (!processo) {
+      console.error('Processo não encontrado para exportar')
+      tituloErro.value = 'Erro na exportação'
+      mensagemErro.value = 'Processo não encontrado'
+      mostrarAlertaErro.value = true
+      fecharAcoes()
+      return
+    }
+    
+    // Importar o serviço de PDF
+    const { pdfService } = await import('../../services/pdfService')
+    
+    // Gerar PDF
+    await pdfService.gerarPDFProcesso(processo)
+    
+    console.log('PDF gerado com sucesso para o processo:', processo.cnpj)
+    
+    // Mostrar alerta de sucesso (opcional)
+    // mostrarAlertaSucesso.value = true
+    
+  } catch (error) {
+    console.error('Erro ao exportar processo:', error)
+    tituloErro.value = 'Erro na exportação'
+    mensagemErro.value = 'Erro ao gerar PDF do processo. Tente novamente.'
+    mostrarAlertaErro.value = true
+  } finally {
+    fecharAcoes()
+  }
+}
+
+const handleDeixarMonitorar = () => {
+  console.log('Deixar de monitorar processo:', acoesDropdown.value.processoId)
+  // TODO: Implementar funcionalidade de deixar de monitorar
+  fecharAcoes()
 }
 
 // Watcher para recarregar dados quando pesquisa mudar (com debounce)
@@ -387,8 +696,9 @@ watch(() => props.searchTerm, (newSearchTerm) => {
   }, 300)
 })
 
-onMounted(() => {
-  carregarProcessos()
+onMounted(async () => {
+  await carregarLimitePlano()
+  await carregarProcessos()
 })
 </script>
 
@@ -513,8 +823,8 @@ onMounted(() => {
 
 /* Ícone */
 .processo-icon {
-  width: 60px;
-  height: 60px;
+  width: 127px;
+  height: 127px;
   background: #f3f4f6;
   border-radius: 8px;
   display: flex;
@@ -524,8 +834,8 @@ onMounted(() => {
 }
 
 .balance-icon {
-  width: 24px;
-  height: 24px;
+  width: 42px;
+  height: 42px;
   color: #9ca3af;
   stroke-width: 1.5;
 }
@@ -613,9 +923,9 @@ onMounted(() => {
   gap: 0.5rem;
   padding: 0.5rem 1rem;
   background: white;
-  border: 1px solid #10b981;
+  border: 1px solid #00945E;
   border-radius: 6px;
-  color: #10b981;
+  color: #00945E;
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
@@ -623,10 +933,46 @@ onMounted(() => {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
-.btn-monitorar:hover {
+.btn-monitorar:hover:not(:disabled) {
   background: #f0fdf4;
-  border-color: #059669;
-  color: #059669;
+  border-color: #007a4e;
+  color: #007a4e;
+}
+
+.btn-monitorar:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-monitorar.loading {
+  background: #f0fdf4;
+  border-color: #00945E;
+  color: #00945E;
+}
+
+.btn-monitorar.limite-atingido {
+  background: white;
+  border-color: #0468FA;
+  color: #0468FA;
+}
+
+.btn-monitorar.limite-atingido:hover:not(:disabled) {
+  background: #f0f9ff;
+  border-color: #0354cc;
+  color: #0354cc;
+}
+
+.btn-monitorar.disabled {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.btn-monitorar.disabled:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #9ca3af;
 }
 
 .monitor-icon {
@@ -635,11 +981,38 @@ onMounted(() => {
   stroke-width: 2;
 }
 
+.loading-spinner-btn {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid #e5e7eb;
+  border-top: 2px solid #00945E;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
 .status-monitorado {
-  color: #10b981;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: #0468FA;
   font-size: 0.875rem;
   font-weight: 500;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.status-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.status-icon-mais {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.status-icon-mais:hover {
+  transform: scale(1.1);
 }
 
 /* Loading */
@@ -799,13 +1172,13 @@ onMounted(() => {
 
 @media (max-width: 640px) {
   .processo-icon {
-    width: 48px;
-    height: 48px;
+    width: 90px;
+    height: 90px;
   }
 
   .balance-icon {
-    width: 20px;
-    height: 20px;
+    width: 32px;
+    height: 32px;
   }
 
   .processo-numero {

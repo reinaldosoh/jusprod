@@ -14,6 +14,81 @@ const ERROR_TYPES = {
   UNKNOWN: 'unknown'
 };
 
+// Cache para verificações (compartilhado com router)
+const loginCache = {
+  setEmailStatus: (userId, status) => {
+    // Armazena no localStorage para persistir entre sessões
+    localStorage.setItem(`email_status_${userId}`, JSON.stringify({
+      value: status,
+      timestamp: Date.now(),
+      permanent: status === true
+    }));
+  },
+  
+  setOnboardingStatus: (userId, status) => {
+    // Armazena no localStorage para persistir entre sessões  
+    localStorage.setItem(`onboarding_status_${userId}`, JSON.stringify({
+      value: status,
+      timestamp: Date.now(),
+      permanent: status === true
+    }));
+  },
+  
+  getEmailStatus: (userId) => {
+    const cached = localStorage.getItem(`email_status_${userId}`);
+    return cached ? JSON.parse(cached) : null;
+  },
+  
+  getOnboardingStatus: (userId) => {
+    const cached = localStorage.getItem(`onboarding_status_${userId}`);
+    return cached ? JSON.parse(cached) : null;
+  },
+  
+  clearCache: (userId) => {
+    localStorage.removeItem(`email_status_${userId}`);
+    localStorage.removeItem(`onboarding_status_${userId}`);
+  }
+};
+
+// Função para verificar e cachear status completo no login
+async function initializeUserStatus(userId) {
+  try {
+    console.log('🔄 Inicializando cache de status do usuário...');
+    
+    // Verificar email diretamente na tabela
+    const { data: emailData, error: emailError } = await supabase
+      .from('usuario')
+      .select('email_confirmado')
+      .eq('uuid', userId)
+      .single();
+    
+    const emailValidado = !emailError && emailData && emailData.email_confirmado === true;
+    loginCache.setEmailStatus(userId, emailValidado);
+    
+    // Verificar onboarding diretamente na tabela
+    const { data: onboardingData, error: onboardingError } = await supabase
+      .from('onboarding')
+      .select('finalizado')
+      .eq('uuid', userId)
+      .single();
+    
+    const naoTemRegistro = onboardingError?.code === 'PGRST116';
+    const onboardingFinalizado = !naoTemRegistro && onboardingData && onboardingData.finalizado === true;
+    loginCache.setOnboardingStatus(userId, onboardingFinalizado);
+    
+    console.log('✅ Cache inicializado:', { 
+      emailValidado, 
+      onboardingFinalizado 
+    });
+    
+    return { emailValidado, onboardingFinalizado };
+    
+  } catch (error) {
+    console.error('❌ Erro ao inicializar status:', error);
+    return { emailValidado: false, onboardingFinalizado: false };
+  }
+}
+
 /**
  * Serviço de autenticação para operações com Supabase
  */
@@ -227,5 +302,7 @@ export const authService = {
     }
   }
 };
+
+export { loginCache, initializeUserStatus };
 
 export default authService;
