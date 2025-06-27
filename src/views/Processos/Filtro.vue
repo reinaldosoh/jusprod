@@ -24,7 +24,7 @@
         </div>
         
         <!-- Botão Novo Processo -->
-        <button class="new-process-button">
+        <button class="new-process-button" @click="abrirNovoProcesso">
           <div class="plus-icon-container">
             <svg class="plus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
               <line x1="12" y1="5" x2="12" y2="19"/>
@@ -35,15 +35,24 @@
         </button>
       </div>
     </div>
+
+    <!-- Modal Novo Processo -->
+    <NovoProcesso 
+      :visible="showNovoProcesso"
+      @fechar="fecharNovoProcesso"
+      @buscar="buscarNovoProcesso"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
+import NovoProcesso from '@/components/UI/novo_processo.vue'
 
-const emit = defineEmits(['search'])
+const emit = defineEmits(['search', 'novo-processo'])
 const searchTerm = ref('')
 const isSearching = ref(false)
+const showNovoProcesso = ref(false)
 
 const handleSearch = () => {
   isSearching.value = true
@@ -53,6 +62,20 @@ const handleSearch = () => {
   setTimeout(() => {
     isSearching.value = false
   }, 1000)
+}
+
+const abrirNovoProcesso = () => {
+  showNovoProcesso.value = true
+}
+
+const fecharNovoProcesso = () => {
+  showNovoProcesso.value = false
+}
+
+const buscarNovoProcesso = (numeroProcesso) => {
+  console.log('Buscando processo:', numeroProcesso)
+  emit('novo-processo', numeroProcesso)
+  fecharNovoProcesso()
 }
 </script>
 

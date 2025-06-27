@@ -15,6 +15,14 @@ const props = defineProps({
   defaultSelected: {
     type: Number,
     default: 0
+  },
+  placeholderText: {
+    type: String,
+    default: 'Selecione uma opção'
+  },
+  showPlaceholderIcon: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -47,6 +55,10 @@ function closeDropdown(e) {
 if (typeof window !== 'undefined') {
   window.addEventListener('click', closeDropdown);
 }
+
+function isActive(option) {
+  return option.active;
+}
 </script>
 
 <template>
@@ -54,9 +66,50 @@ if (typeof window !== 'undefined') {
     <div 
       class="dropdown-header" 
       @click="toggleDropdown"
-      :class="{ 'dropdown-header--open': isOpen }"
+      :class="{ 
+        'dropdown-header--open': isOpen,
+        'dropdown-header--selected': selectedOption && selectedOption.id
+      }"
+      :style="{
+        'background-color': 'white !important',
+        'color': ((selectedOption && selectedOption.id) ? '#0468FA' : '#101828') + ' !important',
+        'border-color': ((selectedOption && selectedOption.id) ? '#0468FA' : '#D0D5DD') + ' !important'
+      }"
     >
-      <span>{{ selectedOption.label }}</span>
+      <div class="dropdown-header-content"
+           :style="{
+             'color': ((selectedOption && selectedOption.id) ? '#0468FA' : '#101828') + ' !important'
+           }">
+        <!-- Ícone placeholder quando não há seleção (apenas se showPlaceholderIcon for true) -->
+        <svg 
+          v-if="(!selectedOption || !selectedOption.id) && showPlaceholderIcon"
+          width="20" 
+          height="20" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg"
+          class="dropdown-icon"
+        >
+          <rect x="3" y="3" width="7" height="7" rx="1" stroke="#667085" stroke-width="2" fill="none"/>
+          <rect x="14" y="3" width="7" height="7" rx="1" stroke="#667085" stroke-width="2" fill="none"/>
+          <rect x="3" y="14" width="7" height="7" rx="1" stroke="#667085" stroke-width="2" fill="none"/>
+          <rect x="14" y="14" width="7" height="7" rx="1" stroke="#667085" stroke-width="2" fill="none"/>
+        </svg>
+        
+        <!-- Ícone quando há algo selecionado -->
+        <img 
+          v-if="selectedOption && selectedOption.icon" 
+          :src="selectedOption.icon"
+          :alt="selectedOption.label"
+          class="dropdown-icon"
+        />
+        
+        <span 
+          :class="{ 'placeholder-text': !selectedOption || !selectedOption.id }"
+          :style="{
+            'color': ((selectedOption && selectedOption.id) ? '#0468FA' : '#667085') + ' !important'
+          }">{{ selectedOption ? selectedOption.label : placeholderText }}</span>
+      </div>
       <svg 
         class="dropdown-arrow" 
         :class="{ 'dropdown-arrow--open': isOpen }"
@@ -66,7 +119,7 @@ if (typeof window !== 'undefined') {
         fill="none" 
         xmlns="http://www.w3.org/2000/svg"
       >
-        <path d="M1 1.5L6 6.5L11 1.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M1 1.5L6 6.5L11 1.5" stroke="#0468FA" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
       </svg>
     </div>
     
@@ -74,25 +127,38 @@ if (typeof window !== 'undefined') {
       v-if="isOpen" 
       class="dropdown-options"
     >
-      <div 
+      <li 
         v-for="option in options" 
         :key="option.id"
-        class="dropdown-option"
-        :class="{ 'dropdown-option--active': option.id === selectedOption.id }"
+        class="dropdown-item"
+        :class="{ 
+          'dropdown-item--active': option.id === selectedOption?.id,
+          'dropdown-item--highlighted': option.active 
+        }"
+        :style="{
+          backgroundColor: option.id === selectedOption?.id ? '#0468FA' : (option.active ? '#0468FA' : ''),
+          color: (option.id === selectedOption?.id || option.active) ? 'white' : '#101828'
+        }"
         @click="selectOption(option)"
       >
-        {{ option.label }}
-      </div>
+        <img 
+          v-if="option.icon" 
+          :src="(option.id === selectedOption?.id || option.active) ? (option.iconeBranco || option.icon) : option.icon"
+          :alt="option.label"
+          class="dropdown-icon"
+        />
+        <span>{{ option.label }}</span>
+      </li>
     </div>
   </div>
 </template>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 .dropdown-container {
   position: relative;
   width: 100%;
-  max-width: 220px;
-  font-family: Arial, sans-serif;
+  font-family: 'Inter', sans-serif;
   user-select: none;
 }
 
@@ -100,23 +166,38 @@ if (typeof window !== 'undefined') {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  background-color: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
+  padding: 0 16px;
+  height: 44px;
+  border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
-  color: #333;
   transition: all 0.2s ease;
+  /* Fallbacks que serão sobrescritos por inline styles */
+  background-color: white;
+  border: 1px solid #D0D5DD;
+  color: #101828;
 }
 
+.dropdown-header-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Lista funciona apenas com inline styles para evitar conflitos */
+
 .dropdown-header:hover {
-  border-color: #ccc;
+  border-color: #0468FA;
+}
+
+.dropdown-header:focus-within {
+  border-color: #0468FA;
+  box-shadow: 0 0 0 4px rgba(4, 104, 250, 0.1);
 }
 
 .dropdown-header--open {
-  border-radius: 4px 4px 0 0;
-  border-color: #ccc;
+  border-radius: 8px 8px 0 0;
+  border-color: #0468FA;
 }
 
 .dropdown-arrow {
@@ -135,28 +216,46 @@ if (typeof window !== 'undefined') {
   max-height: 250px;
   overflow-y: auto;
   background-color: white;
-  border: 1px solid #ccc;
+  border: 1px solid #0468FA;
   border-top: none;
-  border-radius: 0 0 4px 4px;
+  border-radius: 0 0 8px 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   z-index: 10;
 }
 
-.dropdown-option {
+.dropdown-item {
   padding: 12px 16px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
-  color: #333;
   cursor: pointer;
   transition: background-color 0.2s ease;
+  font-family: 'Inter', sans-serif;
+  list-style: none;
 }
 
-.dropdown-option:hover {
-  background-color: #f5f5f5;
+.dropdown-item:hover:not(.dropdown-item--active):not(.dropdown-item--highlighted) {
+  background-color: #f5f5f5 !important;
+  color: #101828 !important;
 }
 
-.dropdown-option--active {
-  background-color: #0468FA;
-  color: white;
+.dropdown-item:hover:not(.dropdown-item--active):not(.dropdown-item--highlighted) span {
+  color: #101828 !important;
+}
+
+.dropdown-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+/* Removido - usando apenas inline styles */
+
+.placeholder-text {
+  color: #667085;
 }
 
 @media (max-width: 768px) {
@@ -166,12 +265,13 @@ if (typeof window !== 'undefined') {
   
   .dropdown-header {
     height: 48px;
-    padding: 14px 16px;
+    padding: 0 16px;
     font-size: 15px;
   }
   
-  .dropdown-option {
-    padding: 14px 16px;
+  .dropdown-item {
+    padding: 0 16px;
+    height: 48px;
     font-size: 15px;
   }
   

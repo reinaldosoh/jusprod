@@ -10,11 +10,15 @@ const props = defineProps({
   posicao: {
     type: Object,
     default: () => ({ top: 0, left: 0 })
+  },
+  processoId: {
+    type: [Number, String],
+    required: false
   }
 })
 
 // Emits para comunicação com componente pai
-const emit = defineEmits(['close', 'vincular-clientes', 'exportar', 'deixar-monitorar'])
+const emit = defineEmits(['close', 'vincular-clientes', 'enviar-whatsapp', 'exportar', 'deixar-monitorar'])
 
 // Usar a posição passada como prop com ajuste para respeitar os limites do container
 const dropdownPosition = computed(() => {
@@ -67,7 +71,7 @@ const handleClose = () => {
 }
 
 const handleVincularClientes = () => {
-  emit('vincular-clientes')
+  emit('vincular-clientes', props.processoId)
   emit('close')
 }
 
@@ -77,7 +81,7 @@ const handleExportar = () => {
 }
 
 const handleDeixarMonitorar = () => {
-  emit('deixar-monitorar')
+  emit('deixar-monitorar', props.processoId)
   emit('close')
 }
 </script>

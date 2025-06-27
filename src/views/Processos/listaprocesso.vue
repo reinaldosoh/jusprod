@@ -146,16 +146,36 @@
           </button>
           <div v-else class="status-monitorado">
             <!-- Ícone de Calendário -->
-            <img src="/images/iconcalendar.svg" alt="Calendário" class="status-icon" />
+            <img 
+              src="/images/iconcalendar.svg" 
+              alt="Calendário" 
+              class="status-icon status-icon-calendar" 
+              @click="handleMarcarAgenda(processo.id, $event)"
+            />
             
             <!-- Ícone de Editar -->
-            <img src="/images/iconEditar.svg" alt="Editar" class="status-icon" />
+            <img 
+              src="/images/iconEditar.svg" 
+              alt="Editar" 
+              class="status-icon status-icon-editar" 
+              @click="handleCriarLembrete(processo.id, $event)"
+            />
             
             <!-- Ícone de WhatsApp -->
-            <img src="/images/iconWhats.svg" alt="WhatsApp" class="status-icon" />
+            <img 
+              src="/images/iconWhats.svg" 
+              alt="WhatsApp" 
+              class="status-icon status-icon-whatsapp" 
+              @click="handleEnviarWhatsapp(processo.id, $event)"
+            />
             
             <!-- Ícone de Email -->
-            <img src="/images/iconEmail.svg" alt="Email" class="status-icon" />
+            <img 
+              src="/images/iconEmail.svg" 
+              alt="Email" 
+              class="status-icon status-icon-email" 
+              @click="handleEnviarEmail(processo.id, $event)"
+            />
             
             <!-- Ícone de Mais -->
             <img 
@@ -244,10 +264,131 @@
     <acoesProcessos
       :show="acoesDropdown.show"
       :posicao="acoesDropdown.posicao"
+      :processo-id="acoesDropdown.processoId"
       @close="fecharAcoes"
       @vincular-clientes="handleVincularClientes"
       @exportar="handleExportar"
       @deixar-monitorar="handleDeixarMonitorar"
+    />
+
+    <!-- Modal Vincular Cliente -->
+    <vincularCliente
+      :show="modalVincularCliente.show"
+      :processo-id="modalVincularCliente.processoId"
+      :cnj="modalVincularCliente.cnj"
+      @close="fecharModalVincularCliente"
+      @cliente-vinculado="handleClienteVinculado"
+    />
+
+    <!-- Alerta de Sucesso Vinculação -->
+    <AlertaSucesso 
+      v-if="mostrarAlertaSucessoVinculacao"
+      :mensagem="mensagemSucessoVinculacao"
+      @fechar="fecharAlertaSucessoVinculacao"
+    />
+
+    <!-- Modal WhatsApp -->
+    <whatsappProcesso
+      :show="modalWhatsappProcesso.show"
+      :processo-id="modalWhatsappProcesso.processoId"
+      :cnj="modalWhatsappProcesso.cnj"
+      @close="fecharModalWhatsapp"
+      @mensagem-enviada="handleWhatsappEnviado"
+    />
+
+    <!-- Alerta de Erro WhatsApp -->
+    <AlertaErro 
+      v-if="mostrarAlertaErroWhatsapp"
+      :titulo="tituloErroWhatsapp"
+      :mensagem="mensagemErroWhatsapp"
+      @fechar="fecharAlertaErroWhatsapp"
+    />
+
+    <!-- Alerta de Sucesso WhatsApp -->
+    <AlertaSucesso 
+      v-if="mostrarAlertaSucessoWhatsapp"
+      :mensagem="mensagemSucessoWhatsapp"
+      @fechar="fecharAlertaSucessoWhatsapp"
+    />
+
+    <!-- Modal Email -->
+    <emailProcesso
+      :show="modalEmailProcesso.show"
+      :processo-id="modalEmailProcesso.processoId"
+      :cnj="modalEmailProcesso.cnj"
+      @close="fecharModalEmail"
+      @mensagem-enviada="handleEmailEnviado"
+    />
+
+    <!-- Alerta de Erro Email -->
+    <AlertaErro 
+      v-if="mostrarAlertaErroEmail"
+      :titulo="tituloErroEmail"
+      :mensagem="mensagemErroEmail"
+      @fechar="fecharAlertaErroEmail"
+    />
+
+    <!-- Alerta de Sucesso Email -->
+    <AlertaSucesso 
+      v-if="mostrarAlertaSucessoEmail"
+      :mensagem="mensagemSucessoEmail"
+      @fechar="fecharAlertaSucessoEmail"
+    />
+
+    <!-- Modal Agenda -->
+    <agendaProcesso
+      :show="modalAgendaProcesso.show"
+      :processo-id="modalAgendaProcesso.processoId"
+      :cnj="modalAgendaProcesso.cnj"
+      @close="fecharModalAgenda"
+      @agenda-criada="handleAgendaCriada"
+    />
+
+    <!-- Alerta de Erro Agenda -->
+    <AlertaErro 
+      v-if="mostrarAlertaErroAgenda"
+      :titulo="tituloErroAgenda"
+      :mensagem="mensagemErroAgenda"
+      @fechar="fecharAlertaErroAgenda"
+    />
+
+    <!-- Alerta de Sucesso Agenda -->
+    <AlertaSucesso 
+      v-if="mostrarAlertaSucessoAgenda"
+      :mensagem="mensagemSucessoAgenda"
+      @fechar="fecharAlertaSucessoAgenda"
+    />
+
+    <!-- Modal Lembrete -->
+    <lembreteProcesso
+      :show="modalLembreteProcesso.show"
+      :processo-id="modalLembreteProcesso.processoId"
+      :cnj="modalLembreteProcesso.cnj"
+      @close="fecharModalLembrete"
+      @lembrete-criado="handleLembreteCriado"
+    />
+
+    <!-- Alerta de Erro Lembrete -->
+    <AlertaErro 
+      v-if="mostrarAlertaErroLembrete"
+      :titulo="tituloErroLembrete"
+      :mensagem="mensagemErroLembrete"
+      @fechar="fecharAlertaErroLembrete"
+    />
+
+    <!-- Alerta de Sucesso Lembrete -->
+    <AlertaSucesso 
+      v-if="mostrarAlertaSucessoLembrete"
+      :mensagem="mensagemSucessoLembrete"
+      @fechar="fecharAlertaSucessoLembrete"
+    />
+
+    <!-- Modal Deixar de Monitorar -->
+    <DeixarMonitorarProcesso
+      v-if="modalDeixarMonitorar.show"
+      :processo="modalDeixarMonitorar.processo"
+      @cancelar="fecharModalDeixarMonitorar"
+      @arquivar="handleProcessoArquivado"
     />
   </div>
 </template>
@@ -259,6 +400,12 @@ import AlertaSucesso from '../../components/UI/AlertaSucesso.vue'
 import AlertaErro from '../../components/UI/AlertaErro.vue'
 import Upgrade from '../../components/UI/Upgrade.vue'
 import acoesProcessos from '../../components/UI/acoesProcessos.vue'
+import vincularCliente from '../../components/UI/vincularCliente.vue'
+import whatsappProcesso from '../../components/UI/whatsapp_processo.vue'
+import emailProcesso from '../../components/UI/Email_processo.vue'
+import agendaProcesso from '../../components/UI/agenda_processo.vue'
+import lembreteProcesso from '../../components/UI/Lembrete_processo.vue'
+import DeixarMonitorarProcesso from '../../components/UI/Deixar_monitorar_processo.vue'
 import { eventBus, EVENTS } from '../../utils/eventBus'
 
 const props = defineProps({
@@ -283,6 +430,34 @@ const algumProcessoMonitorando = computed(() => processosMonitorando.value.size 
 const mostrarUpgrade = ref(false)
 const limitePlan = ref({ atual: 0, maximo: 0, plano: '' })
 const acoesDropdown = ref({ show: false, processoId: null, posicao: null }) // Estado do dropdown de ações
+const modalVincularCliente = ref({ show: false, processoId: null, cnj: '' }) // Estado do modal de vincular cliente
+const modalWhatsappProcesso = ref({ show: false, processoId: null, cnj: '' }) // Estado do modal de WhatsApp
+const mostrarAlertaSucessoVinculacao = ref(false) // Estado do alerta de sucesso da vinculação
+const mensagemSucessoVinculacao = ref('') // Mensagem do alerta de sucesso da vinculação
+const mostrarAlertaErroWhatsapp = ref(false) // Estado do alerta de erro do WhatsApp
+const mensagemErroWhatsapp = ref('') // Mensagem do alerta de erro do WhatsApp
+const tituloErroWhatsapp = ref('Erro') // Título do alerta de erro do WhatsApp
+const mostrarAlertaSucessoWhatsapp = ref(false) // Estado do alerta de sucesso do WhatsApp
+const mensagemSucessoWhatsapp = ref('') // Mensagem do alerta de sucesso do WhatsApp
+const mostrarAlertaErroEmail = ref(false) // Estado do alerta de erro do Email
+const mensagemErroEmail = ref('') // Mensagem do alerta de erro do Email
+const mostrarAlertaSucessoEmail = ref(false) // Estado do alerta de sucesso do Email
+const modalEmailProcesso = ref({ show: false, processoId: null, cnj: '' }) // Estado do modal de Email
+const tituloErroEmail = ref('Erro') // Título do alerta de erro do Email
+const mensagemSucessoEmail = ref('') // Mensagem do alerta de sucesso do Email
+const mostrarAlertaErroAgenda = ref(false) // Estado do alerta de erro da Agenda
+const mensagemErroAgenda = ref('') // Mensagem do alerta de erro da Agenda
+const mostrarAlertaSucessoAgenda = ref(false) // Estado do alerta de sucesso da Agenda
+const modalAgendaProcesso = ref({ show: false, processoId: null, cnj: '' }) // Estado do modal de Agenda
+const tituloErroAgenda = ref('Erro') // Título do alerta de erro da Agenda
+const mensagemSucessoAgenda = ref('') // Mensagem do alerta de sucesso da Agenda
+const mostrarAlertaErroLembrete = ref(false) // Estado do alerta de erro do Lembrete
+const mensagemErroLembrete = ref('') // Mensagem do alerta de erro do Lembrete
+const mostrarAlertaSucessoLembrete = ref(false) // Estado do alerta de sucesso do Lembrete
+const modalLembreteProcesso = ref({ show: false, processoId: null, cnj: '' }) // Estado do modal de Lembrete
+const tituloErroLembrete = ref('Erro') // Título do alerta de erro do Lembrete
+const mensagemSucessoLembrete = ref('') // Mensagem do alerta de sucesso do Lembrete
+const modalDeixarMonitorar = ref({ show: false, processo: null }) // Estado do modal de deixar de monitorar
 let searchTimeout = null
 
 // Computed para filtrar processos
@@ -631,10 +806,51 @@ const fecharAcoes = () => {
   acoesDropdown.value = { show: false, processoId: null, posicao: null }
 }
 
-const handleVincularClientes = () => {
-  console.log('Vincular clientes para processo:', acoesDropdown.value.processoId)
-  // TODO: Implementar funcionalidade de vincular clientes
-  fecharAcoes()
+const handleVincularClientes = (processoId) => {
+  const processo = processos.value.find(p => p.id === processoId)
+  if (processo) {
+    modalVincularCliente.value = {
+      show: true,
+      processoId: processoId,
+      cnj: processo.cnpj || ''
+    }
+  }
+}
+
+const handleEnviarWhatsapp = async (processoId, event) => {
+  event.stopPropagation() // Evitar que o clique expanda o card
+  
+  try {
+    // Importar o serviço de clientes
+    const { clienteService } = await import('../../services/clienteService')
+    
+    // Verificar se há clientes vinculados ao processo
+    const clientesVinculados = await clienteService.listarClientesVinculados(processoId)
+    
+    if (!clientesVinculados || clientesVinculados.length === 0) {
+      // Não há clientes vinculados - mostrar alerta de erro
+      tituloErroWhatsapp.value = 'Nenhum cliente vinculado'
+      mensagemErroWhatsapp.value = 'Não há clientes vinculados a este processo. Vincule ao menos um cliente antes de enviar o WhatsApp.'
+      mostrarAlertaErroWhatsapp.value = true
+      return
+    }
+    
+    // Há clientes vinculados - abrir modal WhatsApp
+    const processo = processos.value.find(p => p.id === processoId)
+    if (processo) {
+      modalWhatsappProcesso.value = {
+        show: true,
+        processoId: processoId,
+        cnj: processo.cnpj || ''
+      }
+    }
+    
+  } catch (error) {
+    console.error('Erro ao verificar clientes vinculados:', error)
+    tituloErroWhatsapp.value = 'Erro'
+    mensagemErroWhatsapp.value = 'Erro ao verificar clientes vinculados. Tente novamente.'
+    mostrarAlertaErroWhatsapp.value = true
+  }
 }
 
 const handleExportar = async () => {
@@ -675,10 +891,339 @@ const handleExportar = async () => {
   }
 }
 
-const handleDeixarMonitorar = () => {
-  console.log('Deixar de monitorar processo:', acoesDropdown.value.processoId)
-  // TODO: Implementar funcionalidade de deixar de monitorar
+const handleDeixarMonitorar = (processoId) => {
+  console.log('Deixar de monitorar processo:', processoId)
+  
+  // Encontrar o processo na lista atual
+  const processo = processos.value.find(p => p.id === processoId)
+  
+  if (processo) {
+    console.log('Processo encontrado:', processo)
+    modalDeixarMonitorar.value = {
+      show: true,
+      processo: processo
+    }
+  } else {
+    console.error('Processo não encontrado com ID:', processoId)
+  }
+  
   fecharAcoes()
+}
+
+// Funções para o modal de vincular cliente
+const fecharModalVincularCliente = () => {
+  modalVincularCliente.value = { show: false, processoId: null, cnj: '' }
+}
+
+const handleClienteVinculado = (dadosEvento) => {
+  console.log('Cliente vinculado/desvinculado:', dadosEvento)
+  
+  // Definir mensagem baseada no tipo de ação
+  if (dadosEvento.tipo === 'vinculacao') {
+    mensagemSucessoVinculacao.value = `Cliente "${dadosEvento.cliente.nome}" foi vinculado ao processo com sucesso!`
+  } else if (dadosEvento.tipo === 'desvinculacao') {
+    mensagemSucessoVinculacao.value = `Cliente "${dadosEvento.cliente.nome}" foi desvinculado do processo com sucesso!`
+  }
+  
+  // Mostrar alerta de sucesso
+  mostrarAlertaSucessoVinculacao.value = true
+  
+  // Opcional: recarregar dados dos processos para atualizar informações
+  // carregarProcessos(props.searchTerm)
+}
+
+const fecharAlertaSucessoVinculacao = () => {
+  mostrarAlertaSucessoVinculacao.value = false
+  mensagemSucessoVinculacao.value = ''
+}
+
+// Funções para o modal de WhatsApp
+const fecharModalWhatsapp = () => {
+  modalWhatsappProcesso.value = { show: false, processoId: null, cnj: '' }
+}
+
+const handleWhatsappEnviado = (dadosEvento) => {
+  console.log('WhatsApp enviado:', dadosEvento)
+  
+  // Definir mensagem de sucesso
+  const totalEnvios = dadosEvento.totalEnvios || 1
+  const titulo = dadosEvento.titulo || 'mensagem'
+  
+  if (totalEnvios === 1) {
+    mensagemSucessoWhatsapp.value = `WhatsApp "${titulo}" enviado com sucesso!`
+  } else {
+    mensagemSucessoWhatsapp.value = `WhatsApp "${titulo}" enviado com sucesso para ${totalEnvios} contatos!`
+  }
+  
+  // Mostrar alerta de sucesso
+  mostrarAlertaSucessoWhatsapp.value = true
+}
+
+const fecharAlertaErroWhatsapp = () => {
+  mostrarAlertaErroWhatsapp.value = false
+  mensagemErroWhatsapp.value = ''
+}
+
+const fecharAlertaSucessoWhatsapp = () => {
+  mostrarAlertaSucessoWhatsapp.value = false
+  mensagemSucessoWhatsapp.value = ''
+}
+
+// Funções para o modal de Email
+const fecharModalEmail = () => {
+  modalEmailProcesso.value = { show: false, processoId: null, cnj: '' }
+}
+
+const handleEmailEnviado = (dadosEvento) => {
+  console.log('Email enviado:', dadosEvento)
+  
+  // Definir mensagem de sucesso
+  const totalEnvios = dadosEvento.totalEnvios || 1
+  const titulo = dadosEvento.titulo || 'mensagem'
+  
+  if (totalEnvios === 1) {
+    mensagemSucessoEmail.value = `Email "${titulo}" enviado com sucesso!`
+  } else {
+    mensagemSucessoEmail.value = `Email "${titulo}" enviado com sucesso para ${totalEnvios} contatos!`
+  }
+  
+  // Mostrar alerta de sucesso
+  mostrarAlertaSucessoEmail.value = true
+}
+
+const fecharAlertaErroEmail = () => {
+  mostrarAlertaErroEmail.value = false
+  mensagemErroEmail.value = ''
+}
+
+const fecharAlertaSucessoEmail = () => {
+  mostrarAlertaSucessoEmail.value = false
+  mensagemSucessoEmail.value = ''
+}
+
+// Funções para o handleEnviarEmail
+const handleEnviarEmail = async (processoId, event) => {
+  event.stopPropagation() // Evitar que o clique expanda o card
+  
+  try {
+    // Importar o serviço de clientes
+    const { clienteService } = await import('../../services/clienteService')
+    
+    // Verificar se há clientes vinculados ao processo
+    const clientesVinculados = await clienteService.listarClientesVinculados(processoId)
+    
+    if (!clientesVinculados || clientesVinculados.length === 0) {
+      // Não há clientes vinculados - mostrar alerta de erro
+      tituloErroEmail.value = 'Nenhum cliente vinculado'
+      mensagemErroEmail.value = 'Não há clientes vinculados a este processo. Vincule ao menos um cliente antes de enviar o email.'
+      mostrarAlertaErroEmail.value = true
+      return
+    }
+    
+    // Há clientes vinculados - abrir modal Email
+    const processo = processos.value.find(p => p.id === processoId)
+    if (processo) {
+      modalEmailProcesso.value = {
+        show: true,
+        processoId: processoId,
+        cnj: processo.cnpj || ''
+      }
+    }
+    
+  } catch (error) {
+    console.error('Erro ao verificar clientes vinculados:', error)
+    tituloErroEmail.value = 'Erro'
+    mensagemErroEmail.value = 'Erro ao verificar clientes vinculados. Tente novamente.'
+    mostrarAlertaErroEmail.value = true
+  }
+}
+
+// Funções para o modal de Agenda
+const fecharModalAgenda = () => {
+  modalAgendaProcesso.value = { show: false, processoId: null, cnj: '' }
+}
+
+const handleAgendaCriada = (dadosEvento) => {
+  console.log('Agenda criada:', dadosEvento)
+  
+  // Definir mensagem de sucesso
+  const titulo = dadosEvento.titulo || 'compromisso'
+  const data = dadosEvento.data || ''
+  
+  // Formatar a data para exibição (DD/MM/YYYY)
+  let dataFormatada = data
+  if (data && data.includes('-')) {
+    const [ano, mes, dia] = data.split('-')
+    dataFormatada = `${dia}/${mes}/${ano}`
+  }
+  
+  mensagemSucessoAgenda.value = `Compromisso "${titulo}" marcado na agenda com sucesso para o dia ${dataFormatada}!`
+  
+  // Mostrar alerta de sucesso
+  mostrarAlertaSucessoAgenda.value = true
+}
+
+const fecharAlertaErroAgenda = () => {
+  mostrarAlertaErroAgenda.value = false
+  mensagemErroAgenda.value = ''
+}
+
+const fecharAlertaSucessoAgenda = () => {
+  mostrarAlertaSucessoAgenda.value = false
+  mensagemSucessoAgenda.value = ''
+}
+
+// Funções para o modal de Lembrete
+const fecharModalLembrete = () => {
+  modalLembreteProcesso.value = { show: false, processoId: null, cnj: '' }
+}
+
+const handleLembreteCriado = (dadosEvento) => {
+  console.log('Lembrete criado:', dadosEvento)
+  
+  // Definir mensagem de sucesso
+  const titulo = dadosEvento.titulo || 'lembrete'
+  const totalLembretes = dadosEvento.totalLembretes || 1
+  
+  if (totalLembretes === 1) {
+    mensagemSucessoLembrete.value = `Lembrete "${titulo}" criado com sucesso!`
+  } else {
+    mensagemSucessoLembrete.value = `Lembrete "${titulo}" criado com sucesso para ${totalLembretes} clientes!`
+  }
+  
+  // Mostrar alerta de sucesso
+  mostrarAlertaSucessoLembrete.value = true
+}
+
+const fecharAlertaErroLembrete = () => {
+  mostrarAlertaErroLembrete.value = false
+  mensagemErroLembrete.value = ''
+}
+
+const fecharAlertaSucessoLembrete = () => {
+  mostrarAlertaSucessoLembrete.value = false
+  mensagemSucessoLembrete.value = ''
+}
+
+// Funções para o modal de deixar de monitorar
+const fecharModalDeixarMonitorar = () => {
+  modalDeixarMonitorar.value = { show: false, processo: null }
+}
+
+const handleProcessoArquivado = async () => {
+  console.log('Processo arquivado com sucesso!')
+  
+  // Recarregar a lista de processos para refletir as mudanças
+  await carregarProcessos(props.searchTerm)
+  
+  // Recarregar o limite do plano para atualizar contador
+  await carregarLimitePlano()
+  
+  // Emitir evento para atualizar outros componentes (como o Controlador)
+  eventBus.emit(EVENTS.PROCESSO_ARQUIVADO, {
+    processoId: modalDeixarMonitorar.value.processo?.id
+  })
+  
+  // Fechar o modal
+  fecharModalDeixarMonitorar()
+}
+
+// Funções para o handleCriarLembrete
+const handleCriarLembrete = async (processoId, event) => {
+  console.log('📝 handleCriarLembrete chamado para processo:', processoId)
+  event.stopPropagation() // Evitar que o clique expanda o card
+  
+  try {
+    // Importar o serviço de clientes
+    console.log('📦 Importando clienteService...')
+    const { clienteService } = await import('../../services/clienteService')
+    
+    // Verificar se há clientes vinculados ao processo
+    console.log('🔍 Verificando clientes vinculados...')
+    const clientesVinculados = await clienteService.listarClientesVinculados(processoId)
+    console.log('👥 Clientes vinculados encontrados:', clientesVinculados)
+    
+    if (!clientesVinculados || clientesVinculados.length === 0) {
+      // Não há clientes vinculados - mostrar alerta de erro
+      console.log('❌ Nenhum cliente vinculado - mostrando alerta')
+      tituloErroLembrete.value = 'Nenhum cliente vinculado'
+      mensagemErroLembrete.value = 'Não há clientes vinculados a este processo. Vincule ao menos um cliente antes de criar um lembrete.'
+      mostrarAlertaErroLembrete.value = true
+      return
+    }
+    
+    // Há clientes vinculados - abrir modal Lembrete
+    console.log('✅ Clientes encontrados - abrindo modal de lembrete')
+    const processo = processos.value.find(p => p.id === processoId)
+    console.log('📄 Processo encontrado:', processo)
+    
+    if (processo) {
+      console.log('🎯 Definindo modalLembreteProcesso.value...')
+      modalLembreteProcesso.value = {
+        show: true,
+        processoId: processoId,
+        cnj: processo.cnpj || ''
+      }
+      console.log('📊 Modal state:', modalLembreteProcesso.value)
+    } else {
+      console.error('❌ Processo não encontrado na lista')
+    }
+    
+  } catch (error) {
+    console.error('❌ Erro ao verificar clientes vinculados:', error)
+    tituloErroLembrete.value = 'Erro'
+    mensagemErroLembrete.value = 'Erro ao verificar clientes vinculados. Tente novamente.'
+    mostrarAlertaErroLembrete.value = true
+  }
+}
+
+// Funções para o handleMarcarAgenda
+const handleMarcarAgenda = async (processoId, event) => {
+  console.log('🗓️ handleMarcarAgenda chamado para processo:', processoId)
+  event.stopPropagation() // Evitar que o clique expanda o card
+  
+  try {
+    // Importar o serviço de clientes
+    console.log('📦 Importando clienteService...')
+    const { clienteService } = await import('../../services/clienteService')
+    
+    // Verificar se há clientes vinculados ao processo
+    console.log('🔍 Verificando clientes vinculados...')
+    const clientesVinculados = await clienteService.listarClientesVinculados(processoId)
+    console.log('👥 Clientes vinculados encontrados:', clientesVinculados)
+    
+    if (!clientesVinculados || clientesVinculados.length === 0) {
+      // Não há clientes vinculados - mostrar alerta de erro
+      console.log('❌ Nenhum cliente vinculado - mostrando alerta')
+      tituloErroAgenda.value = 'Nenhum cliente vinculado'
+      mensagemErroAgenda.value = 'Não há clientes vinculados a este processo. Vincule ao menos um cliente antes de marcar na agenda.'
+      mostrarAlertaErroAgenda.value = true
+      return
+    }
+    
+    // Há clientes vinculados - abrir modal Agenda
+    console.log('✅ Clientes encontrados - abrindo modal da agenda')
+    const processo = processos.value.find(p => p.id === processoId)
+    console.log('📄 Processo encontrado:', processo)
+    
+    if (processo) {
+      console.log('🎯 Definindo modalAgendaProcesso.value...')
+      modalAgendaProcesso.value = {
+        show: true,
+        processoId: processoId,
+        cnj: processo.cnpj || ''
+      }
+      console.log('📊 Modal state:', modalAgendaProcesso.value)
+    } else {
+      console.error('❌ Processo não encontrado na lista')
+    }
+    
+  } catch (error) {
+    console.error('❌ Erro ao verificar clientes vinculados:', error)
+    tituloErroAgenda.value = 'Erro'
+    mensagemErroAgenda.value = 'Erro ao verificar clientes vinculados. Tente novamente.'
+    mostrarAlertaErroAgenda.value = true
+  }
 }
 
 // Watcher para recarregar dados quando pesquisa mudar (com debounce)
@@ -1012,6 +1557,42 @@ onMounted(async () => {
 }
 
 .status-icon-mais:hover {
+  transform: scale(1.1);
+}
+
+.status-icon-whatsapp {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.status-icon-whatsapp:hover {
+  transform: scale(1.1);
+}
+
+.status-icon-email {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.status-icon-email:hover {
+  transform: scale(1.1);
+}
+
+.status-icon-calendar {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.status-icon-calendar:hover {
+  transform: scale(1.1);
+}
+
+.status-icon-editar {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.status-icon-editar:hover {
   transform: scale(1.1);
 }
 
