@@ -1,96 +1,117 @@
 <!-- The exported code uses Tailwind CSS. Install Tailwind CSS in your dev environment to ensure all styles work. -->
 <template>
-<div class="min-h-screen bg-white max-w-[1280px] h-[307px] mx-auto font-inter">
-<!-- Header -->
-<header class="bg-white shadow-sm">
-<div class="px-4 py-3 flex items-center justify-between">
-<div class="flex items-center">
-<div class="text-blue-600 font-bold text-2xl flex items-center">
-<img src="/images/logotipo.png" alt="Jusprod" style="width: 156px; height: 48px; object-fit: contain;" />
+<!-- Mobile Layout -->
+<div class="block md:hidden">
+  <!-- Header Mobile -->
+  <HeaderMobile @toggle-menu="toggleMobileMenu" />
+
+  <!-- Menu Lateral Mobile -->
+  <MenuFixoMobile 
+    :isVisible="isMobileMenuVisible" 
+    @close="closeMobileMenu"
+    @logout="handleLogout"
+    @upgrade="handleUpgrade"
+    @delete-account="handleDeleteAccount"
+  />
 </div>
-</div>
-<div class="flex items-center space-x-6">
-<div class="relative">
-<Bell class="text-gray-600 cursor-pointer w-5 h-5" />
-<span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-8
-</span>
-</div>
-        <Controlador />
-<div class="flex items-center border-l border-r px-4 py-2 cursor-pointer">
-<div class="bg-gray-100 rounded-full h-8 w-8 flex items-center justify-center text-gray-700 mr-2">
-<span>RE</span>
-</div>
-<div class="flex flex-col gap-0">
-<span class="text-sm font-medium">Reinaldo C...</span>
-<span class="text-xs text-gray-500">Nome Escritório</span>
-</div>
-<ChevronDown class="ml-2 text-gray-400 w-4 h-4" />
-</div>
-<div @click="abrirModalLogout" class="flex items-center text-blue-500 cursor-pointer">
-<LogOut class="mr-1 w-5 h-5" />
-<span>Sair</span>
-</div>
-</div>
-</div>
-</header>
-<!-- Main Content -->
-<main class="px-4 py-6">
-<h1 class="text-2xl font-medium text-gray-800 mb-8">O que você deseja fazer agora?</h1>
-<!-- Navigation Tabs -->
-<div class="border-b border-gray-200 mb-8">
-<nav class="flex justify-between w-full -mb-px">
-  <router-link to="/dashboard" custom v-slot="{ navigate }" class="flex-1">
-    <a @click="navigate" class="menu-item" :class="{'menu-item-active': currentPath.startsWith('/dashboard')}">
-      Dashboard
-    </a>
-  </router-link>
-  <router-link to="/intimacoes" custom v-slot="{ navigate }" class="flex-1">
-    <a @click="navigate" class="menu-item flex items-center justify-center" :class="{'menu-item-active': currentPath.startsWith('/intimacoes')}">
-      Intimações
-      <span class="ml-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-        9
-      </span>
-    </a>
-  </router-link>
-  <router-link to="/clientes" custom v-slot="{ navigate }" class="flex-1">
-    <a @click="navigate" class="menu-item" :class="{'menu-item-active': currentPath.startsWith('/clientes')}">
-      Clientes
-    </a>
-  </router-link>
-  <router-link to="/documentos" custom v-slot="{ navigate }" class="flex-1">
-    <a @click="navigate" class="menu-item" :class="{'menu-item-active': currentPath.startsWith('/documentos')}">
-      Documentos
-    </a>
-  </router-link>
-  <router-link to="/processos" custom v-slot="{ navigate }" class="flex-1">
-    <a @click="navigate" class="menu-item" :class="{'menu-item-active': currentPath.startsWith('/processos')}">
-      Processos
-    </a>
-  </router-link>
-  <router-link to="/relatorios" custom v-slot="{ navigate }" class="flex-1">
-    <a @click="navigate" class="menu-item" :class="{'menu-item-active': currentPath.startsWith('/relatorios')}">
-      Relatórios
-    </a>
-  </router-link>
-  <router-link to="/agenda" custom v-slot="{ navigate }" class="flex-1">
-    <a @click="navigate" class="menu-item" :class="{'menu-item-active': currentPath.startsWith('/agenda')}">
-      Minha agenda
-    </a>
-  </router-link>
-  <router-link to="/financeiro" custom v-slot="{ navigate }" class="flex-1">
-    <a @click="navigate" class="menu-item" :class="{'menu-item-active': currentPath.startsWith('/financeiro')}">
-      Planejamento financeiro
-    </a>
-  </router-link>
-  <router-link to="/ajuda" custom v-slot="{ navigate }" class="flex-1">
-    <a @click="navigate" class="menu-item" :class="{'menu-item-active': currentPath.startsWith('/ajuda')}">
-      Ajuda
-    </a>
-  </router-link>
-</nav>
-</div>
-</main>
+
+<!-- Desktop Layout -->
+<div class="hidden md:block pb-6">
+  <div class="min-h-screen bg-white max-w-[1280px] mx-auto font-inter">
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+      <div class="px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center">
+          <div class="text-blue-600 font-bold text-2xl flex items-center">
+            <img src="/images/logotipo.png" alt="Jusprod" style="width: 156px; height: 48px; object-fit: contain;" />
+          </div>
+        </div>
+        <div class="flex items-center space-x-6">
+          <div class="relative">
+            <Bell class="text-gray-600 cursor-pointer w-5 h-5" />
+            <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+              8
+            </span>
+          </div>
+          <Controlador />
+          <div class="flex items-center border-l border-r px-4 py-2 cursor-pointer">
+            <div class="bg-gray-100 rounded-full h-8 w-8 flex items-center justify-center text-gray-700 mr-2">
+              <span>{{ userInitials }}</span>
+            </div>
+            <div class="flex flex-col gap-0">
+              <span class="text-sm font-medium">{{ userName }}</span>
+              <span class="text-xs text-gray-500">{{ userCompany }}</span>
+            </div>
+            <ChevronDown class="ml-2 text-gray-400 w-4 h-4" />
+          </div>
+          <div @click="abrirModalLogout" class="flex items-center text-blue-500 cursor-pointer">
+            <LogOut class="mr-1 w-5 h-5" />
+            <span>Sair</span>
+          </div>
+        </div>
+      </div>
+    </header>
+    <!-- Main Content -->
+    <main class="px-4 py-6">
+      <h1 class="text-2xl font-medium text-gray-800 mb-8">O que você deseja fazer agora?</h1>
+      <!-- Navigation Tabs -->
+      <div class="border-b border-gray-200 mb-8">
+        <nav class="flex justify-between w-full -mb-px">
+          <router-link to="/dashboard" custom v-slot="{ navigate }" class="flex-1">
+            <a @click="navigate" class="menu-item" :class="{'menu-item-active': currentPath.startsWith('/dashboard')}">
+              Dashboard
+            </a>
+          </router-link>
+          <router-link to="/intimacoes" custom v-slot="{ navigate }" class="flex-1">
+            <a @click="navigate" class="menu-item flex items-center justify-center" :class="{'menu-item-active': currentPath.startsWith('/intimacoes')}">
+              Intimações
+              <span 
+                v-if="intimacoesNaoVisualizadas > 0"
+                class="ml-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center"
+              >
+                {{ intimacoesNaoVisualizadas }}
+              </span>
+            </a>
+          </router-link>
+          <router-link to="/clientes" custom v-slot="{ navigate }" class="flex-1">
+            <a @click="navigate" class="menu-item" :class="{'menu-item-active': currentPath.startsWith('/clientes')}">
+              Clientes
+            </a>
+          </router-link>
+          <router-link to="/documentos" custom v-slot="{ navigate }" class="flex-1">
+            <a @click="navigate" class="menu-item" :class="{'menu-item-active': currentPath.startsWith('/documentos')}">
+              Documentos
+            </a>
+          </router-link>
+          <router-link to="/processos" custom v-slot="{ navigate }" class="flex-1">
+            <a @click="navigate" class="menu-item" :class="{'menu-item-active': currentPath.startsWith('/processos')}">
+              Processos
+            </a>
+          </router-link>
+          <router-link to="/relatorios" custom v-slot="{ navigate }" class="flex-1">
+            <a @click="navigate" class="menu-item" :class="{'menu-item-active': currentPath.startsWith('/relatorios')}">
+              Relatórios
+            </a>
+          </router-link>
+          <router-link to="/agenda" custom v-slot="{ navigate }" class="flex-1">
+            <a @click="navigate" class="menu-item" :class="{'menu-item-active': currentPath.startsWith('/agenda')}">
+              Minha agenda
+            </a>
+          </router-link>
+          <router-link to="/financeiro" custom v-slot="{ navigate }" class="flex-1">
+            <a @click="navigate" class="menu-item" :class="{'menu-item-active': currentPath.startsWith('/financeiro')}">
+              Planejamento financeiro
+            </a>
+          </router-link>
+          <router-link to="/ajuda" custom v-slot="{ navigate }" class="flex-1">
+            <a @click="navigate" class="menu-item" :class="{'menu-item-active': currentPath.startsWith('/ajuda')}">
+              Ajuda
+            </a>
+          </router-link>
+        </nav>
+      </div>
+    </main>
+  </div>
 </div>
 
 <!-- Modal de Logout -->
@@ -101,20 +122,38 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { Bell, ChevronDown, LogOut } from 'lucide-vue-next';
 import Controlador from './Controlador.vue';
 import Logout from './Logout.vue';
+import HeaderMobile from './HeaderMobile.vue';
+import MenuFixoMobile from './MenuFixoMobile.vue';
+import { useAuthStore } from '../../stores/auth';
+import { useUsuario } from '../../composables/useUsuario';
+import { useIntimacoes } from '../../composables/useIntimacoes';
 
 const router = useRouter();
 const route = useRoute();
+const authStore = useAuthStore();
+const { buscarDadosUsuario, nomeUsuario, iniciaisUsuario, dadosUsuario } = useUsuario();
+const { intimacoesNaoVisualizadas, buscarContadorIntimacoes, configurarListenerIntimacoes } = useIntimacoes();
 
 // Detectar a rota atual para destacar o item de menu correto
 const currentPath = computed(() => route.path);
 
+// Dados do usuário computados
+const userName = computed(() => nomeUsuario.value);
+const userInitials = computed(() => iniciaisUsuario.value);
+const userCompany = computed(() => {
+  return dadosUsuario.value?.role_atual || 'Nome Escritório';
+});
+
 // Estado para controlar a visibilidade do modal de logout
 const modalLogoutVisivel = ref(false);
+
+// Estado para controlar a visibilidade do menu mobile
+const isMobileMenuVisible = ref(false);
 
 // Função para abrir o modal de logout
 const abrirModalLogout = () => {
@@ -124,6 +163,31 @@ const abrirModalLogout = () => {
 // Função para fechar o modal de logout
 const fecharModalLogout = () => {
   modalLogoutVisivel.value = false;
+};
+
+// Funções para o menu mobile
+const toggleMobileMenu = () => {
+  isMobileMenuVisible.value = !isMobileMenuVisible.value;
+};
+
+const closeMobileMenu = () => {
+  isMobileMenuVisible.value = false;
+};
+
+const handleLogout = () => {
+  // Lógica de logout já existe na função logout()
+  logout();
+};
+
+const handleUpgrade = () => {
+  // Redirecionar para página de planos
+  router.push('/planos');
+};
+
+const handleDeleteAccount = () => {
+  // Aqui você pode adicionar lógica para deletar conta
+  // Por exemplo, abrir um modal de confirmação
+  console.log('Deletar conta solicitado');
 };
 
 // Logout agora é gerenciado diretamente pelo componente Logout.vue
@@ -138,6 +202,29 @@ const logout = () => {
   // Redirecionar para a página de login
   router.push('/login');
 };
+
+// Estados para realtime updates
+let intimacoesSubscription = null;
+
+// Buscar dados do usuário e intimações quando o componente é montado
+onMounted(async () => {
+  if (authStore.user?.value?.id) {
+    await buscarDadosUsuario();
+    
+    // Buscar contagem inicial de intimações não visualizadas
+    await buscarContadorIntimacoes();
+    
+    // Configurar listener para atualizações em tempo real
+    intimacoesSubscription = configurarListenerIntimacoes();
+  }
+});
+
+// Limpar subscription quando componente for desmontado
+onUnmounted(() => {
+  if (intimacoesSubscription) {
+    intimacoesSubscription.unsubscribe();
+  }
+});
 
 const recentProcesses = ref([
 {
@@ -196,6 +283,13 @@ return 'bg-gray-100 text-gray-800';
 /* Apply system font for better performance */
 * {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Força esconder completamente o layout desktop em mobile */
+@media (max-width: 767px) {
+  .hidden {
+    display: none !important;
+  }
 }
 
 /* Navigation menu styles */
