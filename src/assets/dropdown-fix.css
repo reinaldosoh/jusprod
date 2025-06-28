@@ -1,0 +1,22 @@
+/* Regras para corrigir o problema de z-index dos dropdowns */
+
+/* Dropdown de INÍCIO - z-index MAIS ALTO (30) */
+.inicio-dropdown .dropdown-container,
+.inicio-dropdown .dropdown-options {
+  position: relative;
+  z-index: 30 !important;
+}
+
+/* Dropdown de FIM - z-index MÉDIO (20) */
+.fim-dropdown .dropdown-container,
+.fim-dropdown .dropdown-options {
+  position: relative;
+  z-index: 20 !important;
+}
+
+/* Dropdown de CLIENTE/CATEGORIA - z-index MAIS BAIXO (10) */
+.category-field .dropdown-container,
+.category-field .dropdown-options {
+  position: relative;
+  z-index: 10 !important;
+}
