@@ -1,15 +1,20 @@
 <template>
   <div>
     <MenuFixo />
-    <main class="container mx-auto px-6 py-8">
-      <div class="text-center">
-        <h1 class="text-2xl font-bold text-gray-900 mb-4">Intimações</h1>
-        <p class="text-gray-600">Em breve</p>
-      </div>
-    </main>
+    <FiltroIntimacao @search="handleSearch" />
+    <ListaIntimacoes :search-term="searchTerm" />
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import MenuFixo from '../../components/UI/MenuFixo.vue'
+import FiltroIntimacao from '../../components/UI/FiltroIntimacao.vue'
+import ListaIntimacoes from './listaintimacoes.vue'
+
+const searchTerm = ref('')
+
+const handleSearch = (termo) => {
+  searchTerm.value = termo
+}
 </script> 

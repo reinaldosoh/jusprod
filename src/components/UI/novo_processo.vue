@@ -67,10 +67,12 @@ const buscarProcesso = async () => {
   error.value = ''
 
   try {
-    // Remove formatação para enviar apenas números
+    // Manter o valor com máscara para exibição
+    const valorComMascara = numeroProcesso.value
+    // Remove formatação apenas para enviar para a API
     const apenasNumeros = numeroProcesso.value.replace(/\D/g, '')
     
-    console.log('Buscando processo:', apenasNumeros)
+    console.log('Buscando processo:', valorComMascara, 'números:', apenasNumeros)
 
     // Obter JWT do usuário autenticado
     const { data: { session } } = await supabase.auth.getSession()
@@ -88,39 +90,37 @@ const buscarProcesso = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
         'Authorization': `Bearer ${session.access_token}`,
       },
       body: JSON.stringify({
-        numeroProcesso: apenasNumeros
+        numeroProcesso: apenasNumeros // Envia apenas números para a API
       }),
     })
 
+    console.log('Resposta da Edge Function:', response.status, response.statusText)
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      const errorMessage = errorData.error || 'Erro ao buscar processo. Tente novamente.'
-      throw new Error(errorMessage)
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Erro ao buscar processo')
     }
 
     const resultado = await response.json()
-    console.log('Resposta da Edge Function:', resultado)
+    console.log('Resultado da busca:', resultado)
 
-    if (resultado.success && resultado.data) {
-      console.log('Processo encontrado:', resultado.data)
-      
-      // Emitir eventos de sucesso
-      emit('buscar', apenasNumeros)
-      emit('processo-encontrado', resultado.data)
-      
-      // Fechar modal
-      fecharModal()
-    } else {
-      throw new Error('Resposta inválida do servidor')
-    }
+    // Emitir evento com valor formatado (com máscara) para ser exibido no filtro
+    emit('buscar', valorComMascara)
+    
+    // Fechar modal após busca bem-sucedida
+    setTimeout(() => {
+      emit('fechar')
+    }, 100)
+    
+    // Aqui você pode adicionar lógica adicional se o processo foi encontrado
+    // Por exemplo, mostrar uma mensagem de sucesso ou redirecionar
 
   } catch (err) {
     console.error('Erro ao buscar processo:', err)
-    error.value = err.message || 'Erro ao buscar processo. Tente novamente.'
+    error.value = err.message || 'Erro ao buscar processo'
   } finally {
     loading.value = false
   }

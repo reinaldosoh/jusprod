@@ -16,6 +16,10 @@ const props = defineProps({
   show: {
     type: Boolean,
     default: false
+  },
+  intimacao: {
+    type: Object,
+    default: null
   }
 });
 
@@ -89,11 +93,14 @@ async function enviarMensagem() {
       mensagem: textoMensagem.value.trim(),
       emailsAdicionais: enviarParaOutros.value 
         ? emailsAdicionais.value.filter(email => email.email.trim() && isValidEmail(email.email.trim()))
-        : []
+        : [],
+      intimacao: props.intimacao || null
     };
 
-    // Chamar serviço de Email
-    const resultado = await emailService.enviarMensagem(dadosEnvio);
+    // Chamar serviço de Email apropriado
+    const resultado = props.intimacao 
+      ? await emailService.enviarMensagemIntimacao(dadosEnvio)
+      : await emailService.enviarMensagem(dadosEnvio);
     
     // Resetar campos após envio bem-sucedido
     resetarCampos();
@@ -140,7 +147,34 @@ function handleClickOutside(event) {
       <!-- Conteúdo do modal -->
       <div class="modal-content">
         <!-- Título do conteúdo -->
-        <h2 class="content-title">Compartilhe a notificação sobre este processo</h2>
+        <h2 class="content-title">{{ intimacao ? 'Compartilhe a notificação sobre esta intimação' : 'Compartilhe a notificação sobre este processo' }}</h2>
+
+        <!-- Informações da Intimação (se presente) -->
+        <div v-if="intimacao" class="intimacao-info-section">
+          <h3 class="section-title">Informações da Intimação</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Tipo:</span>
+              <span class="info-value">{{ intimacao.tipo || 'N/A' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Seção:</span>
+              <span class="info-value">{{ intimacao.secao || 'N/A' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Data:</span>
+              <span class="info-value">{{ intimacao.data ? new Date(intimacao.data).toLocaleDateString('pt-BR') : 'N/A' }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Tribunal:</span>
+              <span class="info-value">{{ intimacao.tribunal || 'N/A' }}</span>
+            </div>
+            <div v-if="intimacao.snippet" class="info-item full-width">
+              <span class="info-label">Resumo:</span>
+              <span class="info-value">{{ intimacao.snippet }}</span>
+            </div>
+          </div>
+        </div>
 
         <!-- Linha com Título e CNJ -->
         <div class="fields-row">
@@ -263,12 +297,15 @@ function handleClickOutside(event) {
             label="Cancelar"
             type="secondary"
             @click="fecharModal"
+            :disabled="loading"
           />
           <Button
-            label="Enviar"
+            :label="loading ? 'Enviando...' : 'Enviar'"
             type="primary"
             :disabled="loading || !formularioValido"
             @click="enviarMensagem"
+            class="send-button"
+            :class="{ 'loading': loading }"
           />
         </div>
       </div>
@@ -299,7 +336,7 @@ function handleClickOutside(event) {
 .modal-container {
   width: 547px;
   background: white;
-  border-radius: 8px;
+  border-radius: 22px;
   overflow: hidden;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
   max-height: 90vh;
@@ -311,7 +348,7 @@ function handleClickOutside(event) {
   background-color: #0468FA;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   padding: 0 20px;
   position: relative;
 }
@@ -322,7 +359,7 @@ function handleClickOutside(event) {
   font-weight: 600;
   font-family: 'Inter', sans-serif;
   margin: 0;
-  text-align: center;
+
 }
 
 .close-button {
@@ -332,17 +369,9 @@ function handleClickOutside(event) {
   font-size: 20px;
   font-weight: bold;
   cursor: pointer;
-  width: 24px;
-  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  position: absolute;
-  right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
 }
 
 .close-button:hover {
@@ -359,6 +388,54 @@ function handleClickOutside(event) {
   color: #111827;
   margin: 0 0 16px 0;
   font-family: 'Inter', sans-serif;
+}
+
+.intimacao-info-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 12px 0;
+  font-family: 'Inter', sans-serif;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.info-item {
+  display: flex;
+  gap: 8px;
+}
+
+.info-item.full-width {
+  grid-column: 1 / -1;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  min-width: 60px;
+  font-family: 'Inter', sans-serif;
+}
+
+.info-value {
+  font-size: 12px;
+  color: #374151;
+  font-family: 'Inter', sans-serif;
+  word-break: break-word;
 }
 
 .field-wrapper {
@@ -602,11 +679,53 @@ function handleClickOutside(event) {
   height: 44px;
 }
 
+/* Estilos para estado de loading */
+.send-button.loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.send-button.loading::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  margin: auto;
+  border: 2px solid transparent;
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+@keyframes spin {
+  0% { transform: translateY(-50%) rotate(0deg); }
+  100% { transform: translateY(-50%) rotate(360deg); }
+}
+
 @media (max-width: 600px) {
   .modal-container {
     width: 90%;
     margin: 20px;
     max-height: 95vh;
+  }
+  
+  .header-bar {
+    height: auto;
+    min-height: 45px;
+    padding: 8px 15px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .modal-title {
+    font-size: 13px;
+    width: auto;
+    white-space: normal;
+    line-height: 1.2;
   }
   
   .modal-content {
@@ -628,6 +747,14 @@ function handleClickOutside(event) {
   }
   
   .actions-section :deep(.button) {
+    width: 100%;
+  }
+  
+  .input-with-icon :deep(.input-container),
+  .input-with-icon :deep(.input-wrapper),
+  .input-with-icon :deep(.input-field),
+  .email-input,
+  .textarea-field {
     width: 100%;
   }
 }

@@ -21,12 +21,12 @@ function handleEmailEnviado(data) {
 
 <template>
   <div class="esquecer-senha-wrapper">
-    <div class="esquecer-senha-container">
-      <LadoEsquerdoEsquecerSenha 
-        @voltar="handleVoltar"
-        @enviado="handleEmailEnviado"
-      />
-      <LadoDireitoEsquecerSenha />
+  <div class="esquecer-senha-container">
+    <LadoEsquerdoEsquecerSenha 
+      @voltar="handleVoltar"
+      @enviado="handleEmailEnviado"
+    />
+    <LadoDireitoEsquecerSenha />
     </div>
   </div>
 </template>

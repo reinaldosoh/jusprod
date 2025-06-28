@@ -17,6 +17,10 @@ const props = defineProps({
   show: {
     type: Boolean,
     default: false
+  },
+  intimacao: {
+    type: Object,
+    default: null
   }
 });
 
@@ -42,6 +46,7 @@ const categorias = ref([]);
 const categoriasDropdown = ref([]);
 const clientesVinculados = ref([]);
 const processoDetalhes = ref({});
+const emailUsuario = ref('');
 
 // Estados do calendário
 const dataAtual = new Date();
@@ -77,6 +82,18 @@ const horariosFim = computed(() => {
     }
   }
   return horarios;
+});
+
+// Computed para emails completos (clientes + usuário)
+const emailsCompletos = computed(() => {
+  const emails = [...emailsClienteSelecionado.value];
+  
+  // Incluir email do usuário se existir e não estiver na lista
+  if (emailUsuario.value && !emails.includes(emailUsuario.value)) {
+    emails.push(emailUsuario.value);
+  }
+  
+  return emails;
 });
 
 // Computed para validação do formulário
@@ -355,14 +372,20 @@ const criarAgenda = async () => {
       throw new Error('Usuário não autenticado');
     }
 
-    // 2. Obter dados do usuário
+    // 2. Obter dados do usuário (incluindo email)
     const { data: userData, error: userError } = await supabase
       .from('usuario')
-      .select('id')
+      .select('id, email')
       .eq('uuid', session.user.id)
       .single();
 
     if (userError) throw userError;
+
+    console.log('👤 Dados do usuário obtidos:', {
+      id: userData.id,
+      email: userData.email,
+      hasEmail: !!userData.email
+    });
 
     // 3. Preparar dados da agenda
     const dataInicioCompleta = `${dataSelecionada.value}T${horaInicio.value}:00`;
@@ -422,23 +445,75 @@ const criarAgenda = async () => {
       timestamp: new Date().toISOString()
     };
 
-    // Criar um objeto para cada email do cliente
-    const webhookData = emailsClienteSelecionado.value.length > 0 
-      ? emailsClienteSelecionado.value.map(email => ({
-          ...baseData,
-          cliente_email: email
-        }))
-      : [{ ...baseData, cliente_email: '' }]; // Se não tiver emails, envia um objeto vazio
+    // Adicionar campos específicos da intimação se existir
+    if (props.intimacao) {
+      baseData.snippet = props.intimacao.snippet || '';
+      baseData.secao = props.intimacao.secao || '';
+      baseData.tipo = props.intimacao.tipo || '';
+      baseData.tribunal = props.intimacao.tribunal || '';
+      baseData.autor_intimacao = props.intimacao.autor || '';
+      baseData.reu_intimacao = props.intimacao.reu || '';
+      
+      // Formatar conteúdo removendo tags HTML
+      let conteudoFormatado = '';
+      if (props.intimacao.conteudo) {
+        // Remover tags HTML e converter entidades
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = props.intimacao.conteudo;
+        conteudoFormatado = tempDiv.textContent || tempDiv.innerText || '';
+      }
+      baseData.conteudo = conteudoFormatado;
+      
+      console.log('📋 Dados específicos da intimação adicionados:', {
+        snippet: baseData.snippet,
+        secao: baseData.secao,
+        tipo: baseData.tipo,
+        tribunal: baseData.tribunal,
+        autor_intimacao: baseData.autor_intimacao,
+        reu_intimacao: baseData.reu_intimacao,
+        conteudo: baseData.conteudo?.substring(0, 100) + '...'
+      });
+    }
 
-    // 6. Enviar para webhook N8N
-    const webhookUrl = 'https://n8nwebhook.estruturadeapi.com/webhook/285b2ce0-a61a-4cba-b813-6dcd62f4b1ac';
-    console.log('📤 Enviando para webhook N8N...', {
-      cliente: clienteSelecionado?.nome,
-      total_emails: emailsClienteSelecionado.value.length,
-      emails_individuais: emailsClienteSelecionado.value,
-      payload_array: webhookData
+    // Usar lista completa de emails (clientes + usuário autenticado) do computed
+    const emailsParaNotificacao = emailsCompletos.value.length > 0 
+      ? emailsCompletos.value 
+      : (userData.email ? [userData.email] : []);
+    
+    console.log('📧 Lista completa de emails para notificação:', {
+      emailsClientes: emailsClienteSelecionado.value,
+      emailUsuario: userData.email,
+      emailsCompletos: emailsParaNotificacao,
+      totalEmails: emailsParaNotificacao.length
     });
 
+    // Criar um objeto para cada email (clientes + usuário)
+    const webhookData = emailsParaNotificacao.length > 0 
+      ? emailsParaNotificacao.map(email => ({
+          ...baseData,
+          cliente_email: email,
+          is_user_email: email === userData.email // Flag para identificar se é o email do usuário
+        }))
+      : [{ ...baseData, cliente_email: userData.email || '', is_user_email: true }]; // Fallback se não tiver emails
+
+    // 6. Enviar para webhook N8N
+    const webhookUrl = props.intimacao 
+      ? 'https://n8nwebhook.estruturadeapi.com/webhook/19b16195-f5b9-422b-bc8c-5ce6ba55bd87'
+      : 'https://n8nwebhook.estruturadeapi.com/webhook/285b2ce0-a61a-4cba-b813-6dcd62f4b1ac';
+    
+    console.log('📤 Enviando para webhook N8N...', {
+      tipo: props.intimacao ? 'intimacao' : 'processo',
+      url: webhookUrl,
+      cliente: clienteSelecionado?.nome,
+      total_emails_clientes: emailsClienteSelecionado.value.length,
+      total_emails_completos: emailsParaNotificacao.length,
+      emails_clientes: emailsClienteSelecionado.value,
+      email_usuario: userData.email,
+      emails_para_notificacao: emailsParaNotificacao,
+      payload_array_count: webhookData.length
+    });
+
+    // 🔐 Usar autenticação JWT do usuário
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
@@ -446,6 +521,19 @@ const criarAgenda = async () => {
         'Authorization': `Bearer ${session.access_token}`,
       },
       body: JSON.stringify(webhookData),
+    });
+
+          console.log('🔐 Webhook enviado com autenticação JWT:', {
+        hasAuth: !!session.access_token,
+        authPrefix: session.access_token?.substring(0, 20) + '...',
+        isIntimacao: !!props.intimacao,
+        dadosIntimacao: props.intimacao ? {
+          snippet: props.intimacao.snippet,
+          secao: props.intimacao.secao,
+          tipo: props.intimacao.tipo,
+          tribunal: props.intimacao.tribunal,
+          temConteudo: !!props.intimacao.conteudo
+        } : null
     });
 
     if (!response.ok) {
@@ -501,6 +589,34 @@ const handleClickOutside = (event) => {
   }
 };
 
+// Função para carregar email do usuário
+const carregarEmailUsuario = async () => {
+  try {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError || !session?.user) {
+      console.warn('⚠️ Sessão não encontrada para carregar email do usuário');
+      return;
+    }
+
+    const { data: userData, error: userError } = await supabase
+      .from('usuario')
+      .select('email')
+      .eq('uuid', session.user.id)
+      .single();
+
+    if (userError) {
+      console.error('❌ Erro ao carregar email do usuário:', userError);
+      return;
+    }
+
+    emailUsuario.value = userData.email || '';
+    console.log('📧 Email do usuário carregado:', emailUsuario.value);
+  } catch (error) {
+    console.error('❌ Erro ao carregar email do usuário:', error);
+  }
+};
+
 // Função para inicializar dados quando modal abrir
 const inicializarDados = async () => {
   console.log('🚀 Inicializando dados da agenda...');
@@ -509,7 +625,8 @@ const inicializarDados = async () => {
   await Promise.all([
     carregarCategorias(),
     carregarClientesVinculados(),
-    carregarProcessoDetalhes()
+    carregarProcessoDetalhes(),
+    carregarEmailUsuario()
   ]);
   
   // Definir data atual como padrão
@@ -557,12 +674,37 @@ watch(() => props.show, async (newShow, oldShow) => {
     <div class="modal-container">
       <!-- Tarja azul -->
       <div class="header-bar">
-        <h2 class="modal-title">Marcar na agenda vinculado ao processo</h2>
+        <h2 class="modal-title">
+          {{ props.intimacao ? 'Marcar na agenda relacionado à intimação' : 'Marcar na agenda vinculado ao processo' }}
+        </h2>
         <button class="close-button" @click="fecharModal">×</button>
       </div>
 
       <!-- Conteúdo do modal -->
       <div class="modal-content">
+        <!-- Informações da Intimação (se aplicável) -->
+        <div v-if="props.intimacao" class="intimacao-info-section">
+          <h3 class="intimacao-info-title">📋 Detalhes da Intimação</h3>
+          <div class="intimacao-info-grid">
+            <div class="intimacao-info-item">
+              <span class="info-label">Tipo:</span>
+              <span class="info-value">{{ props.intimacao.tipo || 'N/A' }}</span>
+            </div>
+            <div class="intimacao-info-item">
+              <span class="info-label">Tribunal:</span>
+              <span class="info-value">{{ props.intimacao.tribunal || 'N/A' }}</span>
+            </div>
+            <div class="intimacao-info-item">
+              <span class="info-label">Seção:</span>
+              <span class="info-value">{{ props.intimacao.secao || 'N/A' }}</span>
+            </div>
+            <div v-if="props.intimacao.snippet" class="intimacao-info-item span-full">
+              <span class="info-label">Resumo:</span>
+              <span class="info-value">{{ props.intimacao.snippet }}</span>
+            </div>
+          </div>
+        </div>
+
         <div class="content-layout">
           <!-- Calendário lateral -->
           <div class="calendar-section">
@@ -574,13 +716,13 @@ watch(() => props.show, async (newShow, oldShow) => {
             
             <div class="calendar-grid">
               <div class="weekdays">
-                <div class="weekday">Sun</div>
-                <div class="weekday">Mon</div>
-                <div class="weekday">Tue</div>
-                <div class="weekday">Wed</div>
-                <div class="weekday">Thu</div>
-                <div class="weekday">Fri</div>
-                <div class="weekday">Sat</div>
+                <div class="weekday">Dom</div>
+                <div class="weekday">Seg</div>
+                <div class="weekday">Ter</div>
+                <div class="weekday">Qua</div>
+                <div class="weekday">Qui</div>
+                <div class="weekday">Sex</div>
+                <div class="weekday">Sáb</div>
               </div>
               
               <div class="days-grid">
@@ -625,13 +767,15 @@ watch(() => props.show, async (newShow, oldShow) => {
               </div>
 
               <!-- Campo Categoria -->
-              <div class="field-wrapper category-field">
-                <Dropdown
-                  :options="categoriasDropdown"
-                  @option-selected="onCategoriaSelected"
-                  placeholder-text="Selecione uma categoria"
-                  :show-placeholder-icon="true"
-                />
+              <div class="field-wrapper category-field" style="position: relative; z-index: 1000;">
+                <div style="position: relative; z-index: 1000;">
+                  <Dropdown
+                    :options="categoriasDropdown"
+                    @option-selected="onCategoriaSelected"
+                    placeholder-text="Selecione uma categoria"
+                    :show-placeholder-icon="true"
+                  />
+                </div>
               </div>
             </div>
 
@@ -667,7 +811,7 @@ watch(() => props.show, async (newShow, oldShow) => {
                       <path d="M8 4V8L10.5 10.5" stroke="#6B7280" stroke-width="1.33" stroke-linecap="round"/>
                     </svg>
                   </div>
-                  <div class="dropdown-with-padding">
+                  <div class="dropdown-with-padding inicio-dropdown">
                     <Dropdown 
                       :options="horasInicioOptions"
                       @option-selected="onHoraInicioSelected"
@@ -685,7 +829,7 @@ watch(() => props.show, async (newShow, oldShow) => {
                       <path d="M8 4V8L10.5 10.5" stroke="#6B7280" stroke-width="1.33" stroke-linecap="round"/>
                     </svg>
                   </div>
-                  <div class="dropdown-with-padding">
+                  <div class="dropdown-with-padding fim-dropdown">
                     <Dropdown 
                       :options="horasFimOptions"
                       @option-selected="onHoraFimSelected"
@@ -744,15 +888,24 @@ watch(() => props.show, async (newShow, oldShow) => {
               </div>
             </div>
 
-            <!-- Lista de emails do cliente selecionado -->
-            <div v-if="emailsClienteSelecionado.length > 0" class="emails-section">
-              <label class="emails-label">E-mails do cliente:</label>
+            <!-- Lista de emails que receberão notificação -->
+            <div v-if="emailsCompletos.length > 0" class="emails-section">
+              <label class="emails-label">📧 E-mails que receberão notificação:</label>
               <div class="emails-list">
-                <div v-for="(email, index) in emailsClienteSelecionado" :key="index" class="email-item">
+                <div v-for="(email, index) in emailsCompletos" :key="index" class="email-item">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="email-icon">
                     <path d="M2 4L8 8L14 4M2 4V12C2 12.5523 2.44772 13 3 13H13C13.5523 13 14 12.5523 14 12V4M2 4C2 3.44772 2.44772 3 3 3H13C13.5523 3 14 3.44772 14 4" stroke="#6B7280" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                   <span class="email-text">{{ email }}</span>
+                  <span 
+                    class="email-badge"
+                    :class="{
+                      'badge-user': email === emailUsuario,
+                      'badge-client': email !== emailUsuario
+                    }"
+                  >
+                    {{ email === emailUsuario ? 'Você' : 'Cliente' }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -855,7 +1008,7 @@ watch(() => props.show, async (newShow, oldShow) => {
   width: 900px;
   max-width: 95vw;
   background: white;
-  border-radius: 8px;
+  border-radius: 22px;
   overflow: hidden;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
   max-height: 90vh;
@@ -867,7 +1020,7 @@ watch(() => props.show, async (newShow, oldShow) => {
   background-color: #0468FA;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   padding: 0 20px;
   position: relative;
 }
@@ -888,17 +1041,9 @@ watch(() => props.show, async (newShow, oldShow) => {
   font-size: 20px;
   font-weight: bold;
   cursor: pointer;
-  width: 24px;
-  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  position: absolute;
-  right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
 }
 
 .close-button:hover {
@@ -1274,6 +1419,22 @@ watch(() => props.show, async (newShow, oldShow) => {
     max-height: 95vh;
   }
   
+  .header-bar {
+    height: auto;
+    min-height: 45px;
+    padding: 8px 15px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .modal-title {
+    font-size: 13px;
+    width: auto;
+    white-space: normal;
+    line-height: 1.2;
+  }
+  
   .content-layout {
     flex-direction: column;
     gap: 16px;
@@ -1281,6 +1442,11 @@ watch(() => props.show, async (newShow, oldShow) => {
   
   .calendar-section {
     width: 100%;
+  }
+  
+  .title-category-row {
+    flex-direction: column;
+    gap: 12px;
   }
   
   .fields-row {
@@ -1400,5 +1566,104 @@ watch(() => props.show, async (newShow, oldShow) => {
   .email-text {
     font-size: 13px;
   }
+}
+
+/* Removidos todos os estilos personalizados de z-index */
+
+/* Estilos para seção de informações da intimação */
+.intimacao-info-section {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.intimacao-info-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 12px 0;
+  font-family: 'Inter', sans-serif;
+}
+
+.intimacao-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.intimacao-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.intimacao-info-item.span-full {
+  grid-column: 1 / -1;
+}
+
+.info-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: 'Inter', sans-serif;
+}
+
+.info-value {
+  font-size: 14px;
+  color: #374151;
+  font-family: 'Inter', sans-serif;
+  word-break: break-word;
+}
+
+/* Responsivo para seção de intimação */
+@media (max-width: 768px) {
+  .intimacao-info-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .intimacao-info-section {
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .intimacao-info-title {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+  
+  .info-label {
+    font-size: 11px;
+  }
+  
+  .info-value {
+    font-size: 13px;
+  }
+}
+/* Estilos para badges de email */
+.email-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.badge-user {
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.badge-client {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
 }
 </style> 

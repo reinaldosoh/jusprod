@@ -13,9 +13,9 @@ function handleVoltar() {
 
 <template>
   <div class="reset-password-wrapper">
-    <div class="reset-password-container">
-      <LadoEsquerdoResetPassword @voltar="handleVoltar" />
-      <LadoDireitoEsquecerSenha />
+  <div class="reset-password-container">
+    <LadoEsquerdoResetPassword @voltar="handleVoltar" />
+    <LadoDireitoEsquecerSenha />
     </div>
   </div>
 </template>

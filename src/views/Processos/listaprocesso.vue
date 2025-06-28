@@ -1713,9 +1713,38 @@ onMounted(async () => {
   }
 
   .processo-card {
-    flex-direction: column;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "icon info"
+      "actions actions";
     gap: 1rem;
+    padding: 1rem;
+  }
+
+  .processo-icon {
+    grid-area: icon;
+    margin-right: 0.5rem;
+  }
+
+  .processo-info {
+    grid-area: info;
+    padding-right: 0.5rem;
+  }
+
+  .processo-actions {
+    grid-area: actions;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e5e7eb;
+    margin-top: 0.5rem;
+  }
+
+  .status-monitorado {
+    width: 100%;
+    justify-content: flex-end;
   }
 
   .detalhes-linha {
@@ -1749,21 +1778,43 @@ onMounted(async () => {
   .pagination-numbers {
     margin: 0;
   }
+
+  .btn-monitorar {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 @media (max-width: 640px) {
   .processo-icon {
-    width: 90px;
-    height: 90px;
+    width: 48px;
+    height: 48px;
+    border-radius: 4px;
   }
 
   .balance-icon {
-    width: 32px;
-    height: 32px;
+    width: 24px;
+    height: 24px;
   }
 
   .processo-numero {
-    font-size: 1rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 600;
+  }
+
+  .processo-tribunal {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+  }
+
+  .processo-details p {
+    font-size: 0.75rem;
+    line-height: 1.25rem;
+  }
+
+  .processo-details {
+    gap: 0.125rem;
   }
 }
 </style> 

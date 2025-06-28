@@ -1,8 +1,8 @@
 <template>
   <div class="primeiros-passos-wrapper">
-    <div class="primeiros-passos">
-      <PassoEsquerdo />
-      <PassoDireito />
+  <div class="primeiros-passos">
+    <PassoEsquerdo />
+    <PassoDireito />
     </div>
   </div>
 </template>

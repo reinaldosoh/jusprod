@@ -17,6 +17,10 @@ const props = defineProps({
   show: {
     type: Boolean,
     default: false
+  },
+  intimacao: {
+    type: Object,
+    default: null
   }
 });
 
@@ -157,9 +161,31 @@ async function criarLembrete() {
     }
 
     // 4. Criar lembretes para cada cliente
-    const lembretes = clientesAlvo.map(cliente => ({
+    const lembretes = clientesAlvo.map(cliente => {
+      let textoLembreteCompleto = textoLembrete.value.trim();
+      
+      // Se for uma intimação, adicionar contexto da intimação no texto do lembrete
+      if (props.intimacao) {
+        const contextIntimacao = [
+          `📋 LEMBRETE RELACIONADO À INTIMAÇÃO`,
+          `Tipo: ${props.intimacao.tipo || 'N/A'}`,
+          `Tribunal: ${props.intimacao.tribunal || 'N/A'}`,
+          props.intimacao.secao ? `Seção: ${props.intimacao.secao}` : '',
+          props.intimacao.data ? `Data da Intimação: ${new Date(props.intimacao.data).toLocaleDateString('pt-BR')}` : '',
+          props.intimacao.snippet ? `Resumo: ${props.intimacao.snippet}` : '',
+          ``,
+          `📝 LEMBRETE:`,
+          textoLembreteCompleto
+        ].filter(linha => linha !== '').join('\n');
+        
+        textoLembreteCompleto = contextIntimacao;
+        
+        console.log('📝 Contexto da intimação adicionado ao texto do lembrete');
+      }
+
+      const lembrete = {
       titulo: titulo.value.trim(),
-      lembrete: textoLembrete.value.trim(),
+        lembrete: textoLembreteCompleto,
       processo_id: parseInt(props.processoId),
       processo_cnj: props.cnj,
       cliente_id: cliente.id,
@@ -167,7 +193,10 @@ async function criarLembrete() {
       usuario_id: userData.id,
       uuid: session.user.id,
       created_at: new Date().toISOString()
-    }));
+      };
+
+      return lembrete;
+    });
 
     // 5. Inserir lembretes no banco
     const { data: lembretesData, error: lembretesError } = await supabase
@@ -229,12 +258,41 @@ watch(() => props.show, async (newShow, oldShow) => {
     <div class="modal-container">
       <!-- Tarja azul -->
       <div class="header-bar">
-        <h2 class="modal-title">Vincule esta nota a um cliente ou mais</h2>
+        <h2 class="modal-title">
+          {{ props.intimacao ? 'Vincule esta nota relacionada à intimação a um cliente ou mais' : 'Vincule esta nota a um cliente ou mais' }}
+        </h2>
         <button class="close-button" @click="fecharModal">×</button>
       </div>
 
       <!-- Conteúdo do modal -->
       <div class="modal-content">
+        <!-- Informações da Intimação (se aplicável) -->
+        <div v-if="props.intimacao" class="intimacao-info-section">
+          <h3 class="intimacao-info-title">📋 Detalhes da Intimação</h3>
+          <div class="intimacao-info-grid">
+            <div class="intimacao-info-item">
+              <span class="info-label">Tipo:</span>
+              <span class="info-value">{{ props.intimacao.tipo || 'N/A' }}</span>
+            </div>
+            <div class="intimacao-info-item">
+              <span class="info-label">Tribunal:</span>
+              <span class="info-value">{{ props.intimacao.tribunal || 'N/A' }}</span>
+            </div>
+            <div class="intimacao-info-item">
+              <span class="info-label">Seção:</span>
+              <span class="info-value">{{ props.intimacao.secao || 'N/A' }}</span>
+            </div>
+            <div class="intimacao-info-item">
+              <span class="info-label">Data:</span>
+              <span class="info-value">{{ props.intimacao.data ? new Date(props.intimacao.data).toLocaleDateString('pt-BR') : 'N/A' }}</span>
+            </div>
+            <div v-if="props.intimacao.snippet" class="intimacao-info-item span-full">
+              <span class="info-label">Resumo:</span>
+              <span class="info-value">{{ props.intimacao.snippet }}</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Título do conteúdo -->
         <h2 class="content-title">Adicione um título</h2>
 
@@ -376,7 +434,7 @@ watch(() => props.show, async (newShow, oldShow) => {
 .modal-container {
   width: 547px;
   background: white;
-  border-radius: 8px;
+  border-radius: 22px;
   overflow: hidden;
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
   max-height: 90vh;
@@ -388,7 +446,7 @@ watch(() => props.show, async (newShow, oldShow) => {
   background-color: #0468FA;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   padding: 0 20px;
   position: relative;
 }
@@ -399,7 +457,6 @@ watch(() => props.show, async (newShow, oldShow) => {
   font-weight: 600;
   font-family: 'Inter', sans-serif;
   margin: 0;
-  text-align: center;
 }
 
 .close-button {
@@ -409,17 +466,9 @@ watch(() => props.show, async (newShow, oldShow) => {
   font-size: 20px;
   font-weight: bold;
   cursor: pointer;
-  width: 24px;
-  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  position: absolute;
-  right: 20px;
-  top: 50%;
-  transform: translateY(-50%);
 }
 
 .close-button:hover {
@@ -609,6 +658,22 @@ watch(() => props.show, async (newShow, oldShow) => {
     max-height: 95vh;
   }
   
+  .header-bar {
+    height: auto;
+    min-height: 45px;
+    padding: 8px 15px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  
+  .modal-title {
+    font-size: 13px;
+    width: auto;
+    white-space: normal;
+    line-height: 1.2;
+  }
+  
   .modal-content {
     padding: 16px;
   }
@@ -625,6 +690,62 @@ watch(() => props.show, async (newShow, oldShow) => {
   
   .actions-section :deep(.button) {
     width: 100%;
+  }
+}
+
+/* Estilos para seção de informações da intimação */
+.intimacao-info-section {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.intimacao-info-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 12px 0;
+  font-family: 'Inter', sans-serif;
+}
+
+.intimacao-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.intimacao-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.intimacao-info-item.span-full {
+  grid-column: 1 / -1;
+}
+
+.info-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: 'Inter', sans-serif;
+}
+
+.info-value {
+  font-size: 14px;
+  font-weight: 400;
+  color: #374151;
+  font-family: 'Inter', sans-serif;
+  line-height: 1.4;
+}
+
+@media (max-width: 600px) {
+  .intimacao-info-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style> 

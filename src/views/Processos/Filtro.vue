@@ -24,15 +24,17 @@
         </div>
         
         <!-- Botão Novo Processo -->
-        <button class="new-process-button" @click="abrirNovoProcesso">
-          <div class="plus-icon-container">
-            <svg class="plus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <line x1="12" y1="5" x2="12" y2="19"/>
-              <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-          </div>
-          <span class="button-text">Novo processo</span>
-        </button>
+        <div class="button-container">
+          <button class="new-process-button" @click="abrirNovoProcesso">
+            <div class="plus-icon-container">
+              <svg class="plus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            </div>
+            <span class="button-text">Novo processo</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -74,7 +76,14 @@ const fecharNovoProcesso = () => {
 
 const buscarNovoProcesso = (numeroProcesso) => {
   console.log('Buscando processo:', numeroProcesso)
-  emit('novo-processo', numeroProcesso)
+  
+  // Atualizar o campo de busca com o valor mascarado
+  searchTerm.value = numeroProcesso
+  
+  // Emitir evento de busca para aplicar filtro
+  emit('search', numeroProcesso)
+  
+  // Fechar modal
   fecharNovoProcesso()
 }
 </script>
@@ -113,10 +122,11 @@ const buscarNovoProcesso = (numeroProcesso) => {
   flex-shrink: 0;
 }
 
-.search-container {
+.search-container, .button-container {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
 }
 
 .search-input-wrapper {
@@ -203,6 +213,7 @@ const buscarNovoProcesso = (numeroProcesso) => {
   transition: all 0.2s ease;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   white-space: nowrap;
+  width: 100%;
 }
 
 .new-process-button:hover {
@@ -262,21 +273,43 @@ const buscarNovoProcesso = (numeroProcesso) => {
   .filtro-actions {
     flex-direction: column;
     gap: 1rem;
+    width: 100%;
   }
   
-  .search-container {
+  .search-container, .button-container {
     flex-direction: column;
     gap: 0.75rem;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .search-input-wrapper {
+    width: 100%;
+    margin: 0;
+    padding: 0;
   }
   
   .search-input {
     width: 100%;
+    box-sizing: border-box;
+    margin: 0;
   }
   
   .new-process-button {
     width: 100%;
+    box-sizing: border-box;
     justify-content: center;
+    margin: 0;
   }
+  
+  /* Garante que o input e o botão tenham exatamente a mesma largura */
+  .search-input-wrapper, .button-container, .search-input, .new-process-button {
+    min-width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
   
   .page-title {
     text-align: center;
@@ -292,8 +325,15 @@ const buscarNovoProcesso = (numeroProcesso) => {
     font-size: 1.5rem;
   }
   
-  .search-input {
+  /* Garante que o input e o botão tenham exatamente a mesma largura */
+  .search-input,
+  .search-input-wrapper,
+  .button-container,
+  .new-process-button {
     width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 }
 </style> 

@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../../stores/auth';
-import MenuFixo from '../../components/UI/MenuFixo.vue'
+import MenuFixo from '../../components/UI/MenuFixo.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();

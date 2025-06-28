@@ -1,5 +1,11 @@
 import { supabase } from '../lib/supabase.js';
 
+// Função helper para remover tags HTML
+function removerHTML(texto) {
+  if (!texto) return '';
+  return texto.replace(/<[^>]*>/g, '').trim();
+}
+
 export const whatsappService = {
   /**
    * Envia mensagem WhatsApp para clientes vinculados ao processo
@@ -8,11 +14,12 @@ export const whatsappService = {
    * @param {string} dados.titulo - Título da mensagem
    * @param {string} dados.mensagem - Conteúdo da mensagem
    * @param {Array} dados.telefonesAdicionais - Lista de telefones adicionais (opcional)
+   * @param {Object} dados.intimacao - Dados da intimação (opcional)
    * @returns {Promise<Object>} Resultado do envio
    */
   async enviarMensagem(dados) {
     try {
-      const { processoId, titulo, mensagem, telefonesAdicionais = [] } = dados;
+      const { processoId, titulo, mensagem, telefonesAdicionais = [], intimacao = null } = dados;
 
       // Validar dados obrigatórios
       if (!processoId || !titulo || !mensagem) {
@@ -76,7 +83,7 @@ export const whatsappService = {
 
             for (const whatsapp of listaWhatsapp) {
               if (whatsapp && typeof whatsapp === 'string' && whatsapp.trim()) {
-                whatsappsParaEnvio.push({
+                const dadosBase = {
                   cnpj: processo.cnpj || '',
                   autor: processo.autor || '',
                   reu: processo.reu || '',
@@ -89,7 +96,18 @@ export const whatsappService = {
                   titulo,
                   mensagem,
                   whatsapp: whatsapp.trim(),
-                });
+                };
+
+                // Adicionar campos específicos da intimação se presente
+                if (intimacao) {
+                  dadosBase.snippet = intimacao.snippet || '';
+                  dadosBase.secao = intimacao.secao || '';
+                  dadosBase.tipo = intimacao.tipo || '';
+                  dadosBase.conteudo = removerHTML(intimacao.conteudo) || '';
+                  dadosBase.dscPequena = intimacao.dscPequena || '';
+                }
+
+                whatsappsParaEnvio.push(dadosBase);
               }
             }
           }
@@ -104,7 +122,7 @@ export const whatsappService = {
             const numeroLimpo = telefone.numero.replace(/\D/g, '');
             const whatsappCompleto = `${telefone.ddi}${numeroLimpo}`;
 
-            whatsappsParaEnvio.push({
+            const dadosBase = {
               cnpj: processo.cnpj || '',
               autor: processo.autor || '',
               reu: processo.reu || '',
@@ -117,7 +135,18 @@ export const whatsappService = {
               titulo,
               mensagem,
               whatsapp: whatsappCompleto,
-            });
+            };
+
+            // Adicionar campos específicos da intimação se presente
+            if (intimacao) {
+              dadosBase.snippet = intimacao.snippet || '';
+              dadosBase.secao = intimacao.secao || '';
+              dadosBase.tipo = intimacao.tipo || '';
+              dadosBase.conteudo = removerHTML(intimacao.conteudo) || '';
+              dadosBase.dscPequena = intimacao.dscPequena || '';
+            }
+
+            whatsappsParaEnvio.push(dadosBase);
           }
         }
       }
@@ -161,8 +190,11 @@ export const whatsappService = {
       }));
 
       // 9. Enviar para webhook N8N
-      const webhookUrl = 'https://n8nwebhook.estruturadeapi.com/webhook/3968cb00-16b4-4ca6-a122-9ac73c24fa5e';
-      console.log('Enviando para webhook N8N...');
+      const webhookUrl = intimacao 
+        ? 'https://n8nwebhook.estruturadeapi.com/webhook/7b7361a2-2c00-4529-8306-cd00e2fd251f'
+        : 'https://n8nwebhook.estruturadeapi.com/webhook/3968cb00-16b4-4ca6-a122-9ac73c24fa5e';
+      console.log(`Enviando para webhook N8N ${intimacao ? '(Intimação)' : '(Processo)'}...`);
+      console.log('URL do webhook:', webhookUrl);
       console.log('Dados sendo enviados:', JSON.stringify(mensagensComUserInfo, null, 2));
 
       const response = await fetch(webhookUrl, {

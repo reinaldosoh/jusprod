@@ -1,10 +1,9 @@
 <script setup>
-// Não precisamos mais importar os componentes diretamente
-// pois o Vue Router cuidará de carregar os componentes com base na rota atual
+// Removendo import do MenuFixo
 </script>
 
 <template>
-  <div class="app">
+  <div class="app">    
     <!-- Renderiza o componente correspondente à rota atual -->
     <router-view />
   </div>

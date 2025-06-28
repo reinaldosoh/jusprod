@@ -1,15 +1,27 @@
 <template>
   <div>
     <MenuFixo />
-    <main class="container mx-auto px-6 py-8">
-      <div class="text-center">
-        <h1 class="text-2xl font-bold text-gray-900 mb-4">Minha agenda</h1>
-        <p class="text-gray-600">Em breve</p>
-      </div>
-    </main>
+    <div class="main-content">
+      <h1>Agenda</h1>
+      <p>Em desenvolvimento...</p>
+    </div>
   </div>
 </template>
 
 <script setup>
-import MenuFixo from '../../components/UI/MenuFixo.vue'
-</script> 
+import MenuFixo from '../../components/UI/MenuFixo.vue';
+</script>
+
+<style scoped>
+.main-content {
+  margin-left: 250px;
+  padding: 20px;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+    padding: 10px;
+  }
+}
+</style> 

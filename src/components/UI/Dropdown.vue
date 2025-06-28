@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 
 const props = defineProps({
   options: {
@@ -52,9 +52,9 @@ function closeDropdown(e) {
 }
 
 // Adiciona um event listener para fechar o dropdown quando clicar fora dele
-if (typeof window !== 'undefined') {
-  window.addEventListener('click', closeDropdown);
-}
+onMounted(() => {
+  document.addEventListener('click', closeDropdown);
+})
 
 function isActive(option) {
   return option.active;
@@ -213,14 +213,14 @@ function isActive(option) {
   top: 100%;
   left: 0;
   width: 100%;
-  max-height: 250px;
+  max-height: 200px;
   overflow-y: auto;
   background-color: white;
   border: 1px solid #0468FA;
   border-top: none;
   border-radius: 0 0 8px 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  z-index: 10;
+  z-index: 1100;
 }
 
 .dropdown-item {
