@@ -23,6 +23,10 @@ const props = defineProps({
   showPlaceholderIcon: {
     type: Boolean,
     default: false
+  },
+  iconType: {
+    type: String,
+    default: 'default'
   }
 });
 
@@ -80,9 +84,23 @@ function isActive(option) {
            :style="{
              'color': ((selectedOption && selectedOption.id) ? '#0468FA' : '#101828') + ' !important'
            }">
-        <!-- Ícone placeholder quando não há seleção (apenas se showPlaceholderIcon for true) -->
+        <!-- Ícone de relógio para dropdowns de horário -->
         <svg 
-          v-if="(!selectedOption || !selectedOption.id) && showPlaceholderIcon"
+          v-if="(!selectedOption || !selectedOption.id) && showPlaceholderIcon && iconType === 'clock'"
+          width="20" 
+          height="20" 
+          viewBox="0 0 20 20" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg"
+          class="dropdown-icon"
+        >
+          <circle cx="10" cy="10" r="7.5" stroke="#667085" stroke-width="2"/>
+          <path d="M10 5V10L13 13" stroke="#667085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        
+        <!-- Ícone placeholder padrão para outros casos -->
+        <svg 
+          v-if="(!selectedOption || !selectedOption.id) && showPlaceholderIcon && iconType === 'default'"
           width="20" 
           height="20" 
           viewBox="0 0 24 24" 

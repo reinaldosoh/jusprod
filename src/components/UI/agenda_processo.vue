@@ -304,7 +304,7 @@ const horasInicioOptions = computed(() => [
   ...horariosInicio.value.map(horario => ({
     id: horario,
     label: horario,
-    icon: null,
+    icon: '/icons/clock.svg',
     placeholder: false
   }))
 ]);
@@ -314,7 +314,7 @@ const horasFimOptions = computed(() => [
   ...horariosFim.value.map(horario => ({
     id: horario,
     label: horario,
-    icon: null,
+    icon: '/icons/clock.svg',
     placeholder: false
   }))
 ]);
@@ -674,10 +674,11 @@ watch(() => props.show, async (newShow, oldShow) => {
     <div class="modal-container">
       <!-- Tarja azul -->
       <div class="header-bar">
+        <div class="close-button-placeholder"></div>
         <h2 class="modal-title">
           {{ props.intimacao ? 'Marcar na agenda relacionado à intimação' : 'Marcar na agenda vinculado ao processo' }}
         </h2>
-        <button class="close-button" @click="fecharModal">×</button>
+        <button class="close-button close-button-right" @click="fecharModal">×</button>
       </div>
 
       <!-- Conteúdo do modal -->
@@ -804,38 +805,24 @@ watch(() => props.show, async (newShow, oldShow) => {
             <div class="time-row">
               <!-- Hora de início -->
               <div class="field-wrapper">
-                <div class="dropdown-with-icon">
-                  <div class="input-icon">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <circle cx="8" cy="8" r="6" stroke="#6B7280" stroke-width="1.33"/>
-                      <path d="M8 4V8L10.5 10.5" stroke="#6B7280" stroke-width="1.33" stroke-linecap="round"/>
-                    </svg>
-                  </div>
-                  <div class="dropdown-with-padding inicio-dropdown">
-                    <Dropdown 
-                      :options="horasInicioOptions"
-                      @option-selected="onHoraInicioSelected"
-                    />
-                  </div>
-                </div>
+                <Dropdown 
+                  :options="horasInicioOptions"
+                  @option-selected="onHoraInicioSelected"
+                  :show-placeholder-icon="true"
+                  placeholder-text="Selecionar o início"
+                  icon-type="clock"
+                />
               </div>
 
               <!-- Hora de fim -->
               <div class="field-wrapper">
-                <div class="dropdown-with-icon">
-                  <div class="input-icon">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <circle cx="8" cy="8" r="6" stroke="#6B7280" stroke-width="1.33"/>
-                      <path d="M8 4V8L10.5 10.5" stroke="#6B7280" stroke-width="1.33" stroke-linecap="round"/>
-                    </svg>
-                  </div>
-                  <div class="dropdown-with-padding fim-dropdown">
-                    <Dropdown 
-                      :options="horasFimOptions"
-                      @option-selected="onHoraFimSelected"
-                    />
-                  </div>
-                </div>
+                <Dropdown 
+                  :options="horasFimOptions"
+                  @option-selected="onHoraFimSelected"
+                  :show-placeholder-icon="true"
+                  placeholder-text="Selecionar o fim"
+                  icon-type="clock"
+                />
               </div>
             </div>
 
@@ -1020,7 +1007,7 @@ watch(() => props.show, async (newShow, oldShow) => {
   background-color: #0468FA;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 0 20px;
   position: relative;
 }
@@ -1046,6 +1033,15 @@ watch(() => props.show, async (newShow, oldShow) => {
   justify-content: center;
 }
 
+.close-button-right {
+  position: absolute;
+  right: 10px;
+}
+
+.close-button-placeholder {
+  width: 20px;
+}
+
 .close-button:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
@@ -1062,7 +1058,7 @@ watch(() => props.show, async (newShow, oldShow) => {
 /* Calendário lateral */
 .calendar-section {
   flex-shrink: 0;
-  width: 240px;
+  width: 250px;
   background: #f8fafc;
   border-radius: 8px;
   padding: 16px;
