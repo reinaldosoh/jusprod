@@ -30,16 +30,18 @@
           @dragenter="handleDragEnter"
           @dragleave="handleDragLeave"
         >
-          <ClienteCard
-            v-for="cliente in clientesNovo"
-            :key="cliente.id"
-            :cliente="cliente"
-            :draggable="true"
-            @dragstart="handleDragStart($event, cliente)"
-            @editar="handleEditarCliente"
-            @excluir="handleExcluirCliente"
-            @toggle-favorito="handleToggleFavorito"
-          />
+          <TransitionGroup name="fade" tag="div" class="transition-container">
+            <ClienteCard
+              v-for="cliente in clientesNovo"
+              :key="`novo-${cliente.id}-${cliente.favorito}`"
+              :cliente="cliente"
+              :draggable="true"
+              @dragstart="handleDragStart($event, cliente)"
+              @editar="handleEditarCliente"
+              @excluir="handleExcluirCliente"
+              @toggle-favorito="handleToggleFavorito"
+            />
+          </TransitionGroup>
         </div>
       </div>
 
@@ -59,16 +61,18 @@
           @dragenter="handleDragEnter"
           @dragleave="handleDragLeave"
         >
-          <ClienteCard
-            v-for="cliente in clientesAndamento"
-            :key="cliente.id"
-            :cliente="cliente"
-            :draggable="true"
-            @dragstart="handleDragStart($event, cliente)"
-            @editar="handleEditarCliente"
-            @excluir="handleExcluirCliente"
-            @toggle-favorito="handleToggleFavorito"
-          />
+          <TransitionGroup name="fade" tag="div" class="transition-container">
+            <ClienteCard
+              v-for="cliente in clientesAndamento"
+              :key="`andamento-${cliente.id}-${cliente.favorito}`"
+              :cliente="cliente"
+              :draggable="true"
+              @dragstart="handleDragStart($event, cliente)"
+              @editar="handleEditarCliente"
+              @excluir="handleExcluirCliente"
+              @toggle-favorito="handleToggleFavorito"
+            />
+          </TransitionGroup>
         </div>
       </div>
 
@@ -88,16 +92,18 @@
           @dragenter="handleDragEnter"
           @dragleave="handleDragLeave"
         >
-          <ClienteCard
-            v-for="cliente in clientesFinalizado"
-            :key="cliente.id"
-            :cliente="cliente"
-            :draggable="true"
-            @dragstart="handleDragStart($event, cliente)"
-            @editar="handleEditarCliente"
-            @excluir="handleExcluirCliente"
-            @toggle-favorito="handleToggleFavorito"
-          />
+          <TransitionGroup name="fade" tag="div" class="transition-container">
+            <ClienteCard
+              v-for="cliente in clientesFinalizado"
+              :key="`finalizado-${cliente.id}-${cliente.favorito}`"
+              :cliente="cliente"
+              :draggable="true"
+              @dragstart="handleDragStart($event, cliente)"
+              @editar="handleEditarCliente"
+              @excluir="handleExcluirCliente"
+              @toggle-favorito="handleToggleFavorito"
+            />
+          </TransitionGroup>
         </div>
       </div>
     </div>
@@ -105,14 +111,26 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, computed, TransitionGroup, watch } from 'vue'
 import ClienteCard from '../../components/UI/ClienteCard.vue'
 import { useClientes } from '../../composables/useClientes.js'
 
+// Props para receber o filtro de favoritos do componente pai
+const props = defineProps({
+  filtroFavoritos: {
+    type: Boolean,
+    default: false
+  },
+  filtroAtivo: {
+    type: Object,
+    default: () => ({ tipo: 'nome', valor: '' })
+  }
+});
+
 const {
-  clientesNovo,
-  clientesAndamento,
-  clientesFinalizado,
+  clientesNovo: clientesNovoOriginal,
+  clientesAndamento: clientesAndamentoOriginal,
+  clientesFinalizado: clientesFinalizadoOriginal,
   loading,
   error,
   carregarClientes,
@@ -123,6 +141,91 @@ const {
 
 // Estado para drag and drop
 let draggedCliente = null
+
+// Função para filtrar clientes com base no filtro ativo
+const filtrarClientes = (clientes) => {
+  // Se não houver filtro ativo ou for apenas filtro de favoritos
+  if (!props.filtroAtivo || !props.filtroAtivo.tipo) {
+    return props.filtroFavoritos ? clientes.filter(cliente => cliente.favorito) : clientes;
+  }
+  
+  // Primeiro filtra por favoritos se necessário
+  let resultado = props.filtroFavoritos ? clientes.filter(cliente => cliente.favorito) : clientes;
+  
+  // Depois aplica o filtro específico
+  switch (props.filtroAtivo.tipo) {
+    case 'nome':
+      // Filtrar por nome se houver valor de busca
+      if (props.filtroAtivo.valor) {
+        const valor = props.filtroAtivo.valor.toLowerCase();
+        return resultado.filter(cliente => cliente.nome.toLowerCase().includes(valor));
+      }
+      return resultado;
+      
+    case 'cpf':
+    case 'cnpj':
+      // Filtrar por documento (CPF ou CNPJ)
+      if (props.filtroAtivo.valor) {
+        const valor = props.filtroAtivo.valor.replace(/\D/g, ''); // Remove formatação
+        return resultado.filter(cliente => {
+          const documentoLimpo = cliente.documento.replace(/\D/g, '');
+          return documentoLimpo.includes(valor);
+        });
+      }
+      return resultado;
+      
+    case 'novos clientes':
+      // Filtrar apenas clientes novos
+      resultado = resultado.filter(cliente => cliente.cliente_novo === true);
+      // Se houver valor de busca, filtrar por nome também
+      if (props.filtroAtivo.valor) {
+        const valor = props.filtroAtivo.valor.toLowerCase();
+        return resultado.filter(cliente => cliente.nome.toLowerCase().includes(valor));
+      }
+      return resultado;
+      
+    case 'em andamento':
+      // Filtrar apenas clientes em andamento
+      resultado = resultado.filter(cliente => cliente.cliente_andamento === true);
+      // Se houver valor de busca, filtrar por nome também
+      if (props.filtroAtivo.valor) {
+        const valor = props.filtroAtivo.valor.toLowerCase();
+        return resultado.filter(cliente => cliente.nome.toLowerCase().includes(valor));
+      }
+      return resultado;
+      
+    case 'finalizado':
+      // Filtrar apenas clientes finalizados
+      resultado = resultado.filter(cliente => cliente.cliente_finalizado === true);
+      // Se houver valor de busca, filtrar por nome também
+      if (props.filtroAtivo.valor) {
+        const valor = props.filtroAtivo.valor.toLowerCase();
+        return resultado.filter(cliente => cliente.nome.toLowerCase().includes(valor));
+      }
+      return resultado;
+      
+    default:
+      return resultado;
+  }
+};
+
+// Computed properties para filtrar os clientes por status
+const clientesNovo = computed(() => {
+  return filtrarClientes(clientesNovoOriginal.value);
+});
+
+const clientesAndamento = computed(() => {
+  return filtrarClientes(clientesAndamentoOriginal.value);
+});
+
+const clientesFinalizado = computed(() => {
+  return filtrarClientes(clientesFinalizadoOriginal.value);
+});
+
+// Observar mudanças no filtro ativo para recarregar os clientes se necessário
+watch(() => props.filtroAtivo, (novoFiltro) => {
+  console.log('Filtro alterado no kanban:', novoFiltro);
+}, { deep: true });
 
 // Carregar clientes ao montar o componente
 onMounted(() => {
@@ -177,6 +280,14 @@ const handleDrop = async (event, novoStatus) => {
     resetDragState()
     return
   }
+  
+  // Aplicar a mudança localmente primeiro para uma transição suave
+  // Criamos uma cópia do cliente para modificar
+  const clienteModificado = { ...draggedCliente }
+  clienteModificado.cliente_novo = false
+  clienteModificado.cliente_andamento = false
+  clienteModificado.cliente_finalizado = false
+  clienteModificado[novoStatus] = true
   
   // Atualizar status no banco
   const result = await atualizarStatusCliente(draggedCliente.id, novoStatus)
@@ -371,6 +482,38 @@ const handleToggleFavorito = async (cliente) => {
   transition: background-color 0.2s ease;
   border-radius: 8px;
   min-height: 200px;
+}
+
+/* Adicionar transições para os componentes filhos */
+.kanban-cards > * {
+  transition: all 0.3s ease;
+}
+
+/* Transições para o Vue.js */
+.fade-move,
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+/* Evitar que os itens pulem durante a transição */
+.fade-leave-active {
+  position: absolute;
+}
+
+/* Estilo para o container de transição */
+.transition-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
 }
 
 /* Estilos para drag and drop */

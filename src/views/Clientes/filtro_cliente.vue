@@ -42,9 +42,10 @@
           </svg>
           <input 
             type="text" 
-            placeholder="Pesquisar cliente"
+            :placeholder="getPlaceholderText"
             class="search-input"
-            v-model="searchQuery"
+            v-model="formattedSearchQuery"
+            @input="handleInputChange"
           />
         </div>
       </div>
@@ -67,20 +68,23 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import Dropdown from '../../components/UI/Dropdown.vue'
 import IconesBarra from '../../components/UI/IconesBarra.vue'
 
 const searchQuery = ref('')
+const formattedSearchQuery = ref('')
+const selectedFilter = ref({ id: 1, label: 'Nome' })
 const activeView = ref('kanban')
 
 // Opções do dropdown
 const dropdownOptions = ref([
   { id: 1, label: 'Nome' },
-  { id: 2, label: 'Empresa' },
-  { id: 3, label: 'Status' },
-  { id: 4, label: 'Data' },
-  { id: 5, label: 'Favoritos' }
+  { id: 2, label: 'CPF' },
+  { id: 3, label: 'CNPJ' },
+  { id: 4, label: 'Novos clientes' },
+  { id: 5, label: 'Em andamento' },
+  { id: 6, label: 'Finalizado' }
 ])
 
 // Emits para comunicação com componente pai
@@ -92,24 +96,112 @@ const handleViewChange = (view) => {
 }
 
 const handleDropdownChange = (option) => {
+  selectedFilter.value = option
+  searchQuery.value = ''
+  formattedSearchQuery.value = ''
+  
+  // Emite o evento com o tipo de filtro selecionado
   emit('filter-change', option)
+  
+  // Se for uma opção de status, aplicar o filtro imediatamente sem necessidade de digitar
+  if (['Novos clientes', 'Em andamento', 'Finalizado'].includes(option.label)) {
+    emit('filter-change', { 
+      type: option.label.toLowerCase(),
+      value: '' // Valor vazio para filtrar apenas pelo status
+    })
+  }
 }
 
 const handleNewClient = () => {
   emit('new-client')
 }
 
-const handleIconAction = (action) => {
-  console.log('Ação do ícone:', action)
+const handleIconAction = (action, value) => {
+  console.log('Ação do ícone:', action, value)
   // Implementar ações específicas para os ícones
   if (action === 'favorites') {
-    console.log('Filtrando por favoritos')
-    // Lógica para favoritos
-  } else if (action === 'conversation') {
-    console.log('Abrindo conversas')
-    // Lógica para conversas
+    console.log('Filtrando por favoritos:', value)
+    emit('filter-change', { type: 'favorites', value: value })
   }
 }
+
+// Função para aplicar máscara de CPF: ###.###.###-##
+const applyCpfMask = (value) => {
+  if (!value) return ''
+  
+  // Remove todos os caracteres não numéricos
+  const numericValue = value.replace(/\D/g, '')
+  
+  // Limita a 11 dígitos
+  const limitedValue = numericValue.slice(0, 11)
+  
+  // Aplica a máscara
+  return limitedValue
+    .replace(/^(\d{3})(\d)/, '$1.$2')
+    .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/^(\d{3})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3-$4')
+}
+
+// Função para aplicar máscara de CNPJ: ##.###.###/####-##
+const applyCnpjMask = (value) => {
+  if (!value) return ''
+  
+  // Remove todos os caracteres não numéricos
+  const numericValue = value.replace(/\D/g, '')
+  
+  // Limita a 14 dígitos
+  const limitedValue = numericValue.slice(0, 14)
+  
+  // Aplica a máscara
+  return limitedValue
+    .replace(/^(\d{2})(\d)/, '$1.$2')
+    .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/^(\d{2})\.(\d{3})\.(\d{3})(\d)/, '$1.$2.$3/$4')
+    .replace(/^(\d{2})\.(\d{3})\.(\d{3})\/(\d{4})(\d)/, '$1.$2.$3/$4-$5')
+}
+
+// Função para lidar com a mudança no input
+const handleInputChange = (event) => {
+  const value = event.target.value
+  
+  // Aplica a máscara apropriada com base no filtro selecionado
+  if (selectedFilter.value.label === 'CPF') {
+    formattedSearchQuery.value = applyCpfMask(value)
+  } else if (selectedFilter.value.label === 'CNPJ') {
+    formattedSearchQuery.value = applyCnpjMask(value)
+  } else {
+    formattedSearchQuery.value = value
+  }
+  
+  // Atualiza o valor real para pesquisa (sem formatação)
+  searchQuery.value = formattedSearchQuery.value.replace(/\D/g, '')
+  
+  // Emite o evento de mudança de filtro com o valor e tipo
+  emit('filter-change', { 
+    type: selectedFilter.value.label.toLowerCase(), 
+    value: selectedFilter.value.label === 'CPF' || selectedFilter.value.label === 'CNPJ' 
+      ? searchQuery.value 
+      : formattedSearchQuery.value 
+  })
+}
+
+// Texto do placeholder baseado no filtro selecionado
+const getPlaceholderText = computed(() => {
+  switch (selectedFilter.value.label) {
+    case 'CPF':
+      return 'Digite o CPF (ex: 123.456.789-00)'
+    case 'CNPJ':
+      return 'Digite o CNPJ (ex: 12.345.678/0001-90)'
+    case 'Novos clientes':
+      return 'Pesquisar novos clientes'
+    case 'Em andamento':
+      return 'Pesquisar clientes em andamento'
+    case 'Finalizado':
+      return 'Pesquisar clientes finalizados'
+    default:
+      return 'Pesquisar cliente por nome'
+  }
+})
 </script>
 
 <style scoped>
