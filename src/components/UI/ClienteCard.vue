@@ -2,9 +2,9 @@
   <div class="cliente-card">
     <!-- Botões de ação -->
     <div class="acoes-container">
-      <button class="botao-favorito" @click="$emit('toggle-favorito', cliente)">
-        <!-- Estrela preenchida quando favorito -->
-        <svg v-if="cliente.favorito" width="18" height="18" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" stroke-width="1.5">
+      <button class="botao-favorito" @click="toggleFavoritoCliente">
+        <!-- Estrela preenchida quando favorito (azul do sistema) -->
+        <svg v-if="cliente.favorito" width="18" height="18" viewBox="0 0 24 24" fill="#0468FA" stroke="#0468FA" stroke-width="1.5">
           <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26 12,2"/>
         </svg>
         <!-- Estrela vazia quando não favorito -->
@@ -37,7 +37,14 @@
     
     <!-- Avatar e Nome -->
     <div class="cliente-info">
-      <div class="avatar">
+      <div 
+        class="avatar" 
+        :class="{
+          'avatar-novo': cliente.cliente_novo,
+          'avatar-andamento': cliente.cliente_andamento,
+          'avatar-finalizado': cliente.cliente_finalizado
+        }"
+      >
         <span>{{ iniciais }}</span>
       </div>
       <div class="nome-container">
@@ -97,6 +104,12 @@ const iniciais = computed(() => {
   
   return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
 })
+
+// Função para alternar o estado de favorito
+const toggleFavoritoCliente = () => {
+  // Emite o evento para o componente pai lidar com a atualização
+  emits('toggle-favorito', props.cliente)
+}
 </script>
 
 <style scoped>
@@ -197,15 +210,29 @@ const iniciais = computed(() => {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #f3f4f6; /* Fundo cinza */
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: #111827; /* Texto preto */
   font-weight: 600;
   font-size: 18px;
   font-family: 'Inter', sans-serif;
   flex-shrink: 0;
+  border: 2px solid transparent; /* Borda transparente por padrão */
+}
+
+/* Bordas coloridas de acordo com o status */
+.avatar-novo {
+  border-color: #10b981; /* Verde */
+}
+
+.avatar-andamento {
+  border-color: #f59e0b; /* Laranja */
+}
+
+.avatar-finalizado {
+  border-color: #111827; /* Preto */
 }
 
 .nome-container {
@@ -277,6 +304,7 @@ svg {
     width: 44px;
     height: 44px;
     font-size: 16px;
+    border-width: 2px;
   }
   
   .stat-item {
@@ -330,6 +358,7 @@ svg {
     width: 40px;
     height: 40px;
     font-size: 15px;
+    border-width: 2px;
   }
   
   .stat-item {
@@ -392,6 +421,7 @@ svg {
     width: 36px;
     height: 36px;
     font-size: 14px;
+    border-width: 1.5px;
   }
   
   .stats {
@@ -427,6 +457,7 @@ svg {
     width: 32px;
     height: 32px;
     font-size: 13px;
+    border-width: 1.5px;
   }
   
   .stat-item {

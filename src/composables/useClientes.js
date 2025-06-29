@@ -27,10 +27,10 @@ export function useClientes() {
     error.value = null
 
     try {
+      // Usando a view clientes_kanban que já inclui as contagens de processos e contratos
       const { data, error: supabaseError } = await supabase
-        .from('clientes')
+        .from('clientes_kanban')
         .select('*')
-        .eq('ativo', true)
         .order('nome')
 
       if (supabaseError) {
@@ -69,8 +69,15 @@ export function useClientes() {
         throw updateError
       }
 
-      // Recarregar dados
-      await carregarClientes()
+      // Atualizar estado local em vez de recarregar todos os dados
+      const clienteIndex = clientes.value.findIndex(c => c.id === clienteId);
+      if (clienteIndex !== -1) {
+        // Atualizar os status do cliente localmente
+        clientes.value[clienteIndex].cliente_novo = false;
+        clientes.value[clienteIndex].cliente_andamento = false;
+        clientes.value[clienteIndex].cliente_finalizado = false;
+        clientes.value[clienteIndex][novoStatus] = true;
+      }
       
       return { success: true }
     } catch (err) {
@@ -92,8 +99,12 @@ export function useClientes() {
         throw updateError
       }
 
-      // Recarregar dados
-      await carregarClientes()
+      // Atualizar estado local em vez de recarregar todos os dados
+      // Encontrar o cliente na lista e atualizar seu estado
+      const clienteIndex = clientes.value.findIndex(c => c.id === clienteId);
+      if (clienteIndex !== -1) {
+        clientes.value[clienteIndex].favorito = !favorito;
+      }
       
       return { success: true }
     } catch (err) {
@@ -115,8 +126,9 @@ export function useClientes() {
         throw updateError
       }
 
-      // Recarregar dados
-      await carregarClientes()
+      // Atualizar estado local em vez de recarregar todos os dados
+      // Remover o cliente da lista local
+      clientes.value = clientes.value.filter(c => c.id !== clienteId);
       
       return { success: true }
     } catch (err) {
