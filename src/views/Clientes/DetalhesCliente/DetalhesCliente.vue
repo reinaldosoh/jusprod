@@ -23,6 +23,7 @@
           />
           <FasesProcesso 
             :processo-id="processoSelecionado"
+            :cliente-id="route.params.id"
             @organizar-fases="handleOrganizarFases"
             @fases-criadas="handleFasesCriadas"
           />

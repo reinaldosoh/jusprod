@@ -98,6 +98,16 @@ function isActive(option) {
           <path d="M10 5V10L13 13" stroke="#667085" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         
+        <!-- Ícone de categorias -->
+        <img 
+          v-if="(!selectedOption || !selectedOption.id) && showPlaceholderIcon && iconType === 'categorias'"
+          src="/images/categorias.svg" 
+          alt="Categorias" 
+          width="18" 
+          height="18"
+          class="dropdown-icon"
+        />
+        
         <!-- Ícone placeholder padrão para outros casos -->
         <svg 
           v-if="(!selectedOption || !selectedOption.id) && showPlaceholderIcon && iconType === 'default'"

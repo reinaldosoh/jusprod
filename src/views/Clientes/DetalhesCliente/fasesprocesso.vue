@@ -80,6 +80,18 @@
       @close="fecharModalFases"
       @fases-salvas="handleFasesSalvas"
     />
+
+    <!-- Modal de enviar fase -->
+    <EnviarFase
+      v-if="showModalEnviarFase"
+      :show="showModalEnviarFase"
+      :fase-atual="faseParaEnviar"
+      :todas-fases="fases"
+      :cliente-id="clienteId"
+      :processo-id="processoSelecionado"
+      @close="fecharModalEnviarFase"
+      @fase-enviada="handleFaseEnviada"
+    />
   </div>
 </template>
 
@@ -87,12 +99,17 @@
 import { ref, watch, computed, onMounted } from 'vue'
 import { supabase } from '../../../lib/supabase'
 import CriarFaseProcesso from './criar_fase_processo.vue'
+import EnviarFase from './enviarFase.vue'
 
 // Props
 const props = defineProps({
   processoId: {
     type: Number,
     default: null
+  },
+  clienteId: {
+    type: [Number, String],
+    required: true
   }
 })
 
@@ -100,9 +117,11 @@ const emit = defineEmits(['organizar-fases', 'fases-criadas'])
 
 // Estados do componente
 const showModalFases = ref(false)
+const showModalEnviarFase = ref(false)
 const processoSelecionado = ref(props.processoId)
 const fases = ref([])
 const loading = ref(false)
+const faseParaEnviar = ref(null)
 
 // Computed para ordenar fases (ordem decrescente do número da fase)
 const fasesOrdenadas = computed(() => {
@@ -200,7 +219,24 @@ const editarFase = (fase) => {
 
 const compartilharFase = (fase) => {
   console.log('Compartilhar fase:', fase)
-  // TODO: Implementar compartilhamento de fase
+  faseParaEnviar.value = fase
+  showModalEnviarFase.value = true
+}
+
+// Controle do modal de enviar fase
+const fecharModalEnviarFase = () => {
+  showModalEnviarFase.value = false
+  faseParaEnviar.value = null
+}
+
+const handleFaseEnviada = (dadosFase) => {
+  console.log('Fase enviada:', dadosFase)
+  
+  // Mostrar feedback de sucesso
+  const totalEmails = dadosFase.totalEmails || 1
+  console.log(`✅ Fase "${dadosFase.fase?.titulo}" enviada com sucesso para ${totalEmails} email(s)`)
+  
+  fecharModalEnviarFase()
 }
 </script>
 
