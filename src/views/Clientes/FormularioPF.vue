@@ -1073,8 +1073,8 @@ const salvarCliente = async () => {
     } else {
       // Lógica para salvar novo cliente no Supabase
       const result = await supabase
-        .from('clientes')
-        .insert(clienteParaSalvar)
+      .from('clientes')
+      .insert(clienteParaSalvar)
         .select()
       
       data = result.data
@@ -1108,7 +1108,7 @@ const salvarCliente = async () => {
     
     // Resetar o formulário apenas se não estiver em modo de edição
     if (!props.modoEdicao) {
-      resetarFormulario()
+    resetarFormulario()
     }
     
     // Fechar o formulário

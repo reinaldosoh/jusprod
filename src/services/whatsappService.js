@@ -72,45 +72,45 @@ export const whatsappService = {
           if (cliente) {
             // 3.1. Processar WhatsApps do cliente principal
             if (cliente.lista_whatsapp) {
-              let listaWhatsapp = [];
-              try {
-                listaWhatsapp = typeof cliente.lista_whatsapp === 'string'
-                  ? JSON.parse(cliente.lista_whatsapp)
-                  : Array.isArray(cliente.lista_whatsapp)
-                  ? cliente.lista_whatsapp
-                  : [cliente.lista_whatsapp];
-              } catch (e) {
-                console.warn(`Erro ao parsear lista_whatsapp do cliente ${cliente.id}:`, e);
-                continue;
-              }
+            let listaWhatsapp = [];
+            try {
+              listaWhatsapp = typeof cliente.lista_whatsapp === 'string'
+                ? JSON.parse(cliente.lista_whatsapp)
+                : Array.isArray(cliente.lista_whatsapp)
+                ? cliente.lista_whatsapp
+                : [cliente.lista_whatsapp];
+            } catch (e) {
+              console.warn(`Erro ao parsear lista_whatsapp do cliente ${cliente.id}:`, e);
+              continue;
+            }
 
-              for (const whatsapp of listaWhatsapp) {
-                if (whatsapp && typeof whatsapp === 'string' && whatsapp.trim()) {
-                  const dadosBase = {
-                    cnpj: processo.cnpj || '',
-                    autor: processo.autor || '',
-                    reu: processo.reu || '',
-                    tribunal: processo.tribunal || '',
-                    area: processo.area || '',
-                    classe: processo.classe || '',
-                    assunto: processo.assunto || '',
-                    orgao_julgador: processo.orgao_julgador || '',
-                    valor_causa: processo.valor_causa || '',
-                    titulo,
-                    mensagem,
-                    whatsapp: whatsapp.trim(),
-                  };
+            for (const whatsapp of listaWhatsapp) {
+              if (whatsapp && typeof whatsapp === 'string' && whatsapp.trim()) {
+                const dadosBase = {
+                  cnpj: processo.cnpj || '',
+                  autor: processo.autor || '',
+                  reu: processo.reu || '',
+                  tribunal: processo.tribunal || '',
+                  area: processo.area || '',
+                  classe: processo.classe || '',
+                  assunto: processo.assunto || '',
+                  orgao_julgador: processo.orgao_julgador || '',
+                  valor_causa: processo.valor_causa || '',
+                  titulo,
+                  mensagem,
+                  whatsapp: whatsapp.trim(),
+                };
 
-                  // Adicionar campos específicos da intimação se presente
-                  if (intimacao) {
-                    dadosBase.snippet = intimacao.snippet || '';
-                    dadosBase.secao = intimacao.secao || '';
-                    dadosBase.tipo = intimacao.tipo || '';
-                    dadosBase.conteudo = removerHTML(intimacao.conteudo) || '';
-                    dadosBase.dscPequena = intimacao.dscPequena || '';
-                  }
+                // Adicionar campos específicos da intimação se presente
+                if (intimacao) {
+                  dadosBase.snippet = intimacao.snippet || '';
+                  dadosBase.secao = intimacao.secao || '';
+                  dadosBase.tipo = intimacao.tipo || '';
+                  dadosBase.conteudo = removerHTML(intimacao.conteudo) || '';
+                  dadosBase.dscPequena = intimacao.dscPequena || '';
+                }
 
-                  whatsappsParaEnvio.push(dadosBase);
+                whatsappsParaEnvio.push(dadosBase);
                 }
               }
             }

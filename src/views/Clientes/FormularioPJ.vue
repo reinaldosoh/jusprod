@@ -1146,9 +1146,9 @@ const salvarEmpresa = async () => {
     } else {
       // Lógica para salvar nova empresa no Supabase
       const result = await supabase
-        .from('clientes')
-        .insert(empresaParaSalvar)
-        .select()
+      .from('clientes')
+      .insert(empresaParaSalvar)
+      .select()
       
       clienteData = result.data
       clienteError = result.error
@@ -1232,7 +1232,7 @@ const salvarEmpresa = async () => {
         ? `Empresa ${empresaParaSalvar.nome} e ${qtdRepresentantes} representante(s) legal(is) atualizados com sucesso!`
         : `Empresa ${empresaParaSalvar.nome} atualizada com sucesso!`)
       : (qtdRepresentantes > 0 
-        ? `Empresa ${empresaParaSalvar.nome} e ${qtdRepresentantes} representante(s) legal(is) cadastrados com sucesso!`
+      ? `Empresa ${empresaParaSalvar.nome} e ${qtdRepresentantes} representante(s) legal(is) cadastrados com sucesso!`
         : `Empresa ${empresaParaSalvar.nome} cadastrada com sucesso!`)
     
     emit('clienteSalvo', {
@@ -1242,7 +1242,7 @@ const salvarEmpresa = async () => {
     
     // Resetar o formulário apenas se não estiver em modo de edição
     if (!props.modoEdicao) {
-      resetarFormulario()
+    resetarFormulario()
     }
     
     // Fechar o formulário
