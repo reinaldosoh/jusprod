@@ -62,6 +62,7 @@
           :key="cliente.id" 
           class="cliente-item"
           :class="{ 'cliente-item-hover': true, 'dropdown-open': dropdownOpenMap[cliente.id] }"
+          @click="navegarParaDetalhesCliente(cliente)"
         >
           <div class="ordenacao-col"></div>
           <div class="cliente-col">
@@ -72,7 +73,7 @@
                   <button 
                     type="button"
                     class="estrela" 
-                    @click="toggleFavoritoCliente(cliente)"
+                    @click.stop="toggleFavoritoCliente(cliente)"
                     :class="{ 'favorito': cliente.favorito }"
                   >
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -95,8 +96,8 @@
               <Dropdown 
                 :options="getProcessoOptions(cliente)" 
                 placeholderText="Selecione um processo"
-                @dropdown-open="handleDropdownOpen(cliente.id)"
-                @dropdown-close="handleDropdownClose(cliente.id)"
+                @dropdown-open.stop="handleDropdownOpen(cliente.id)"
+                @dropdown-close.stop="handleDropdownClose(cliente.id)"
               />
             </div>
           </div>
@@ -120,7 +121,7 @@
                 <button 
                   type="button"
                   class="estrela" 
-                  @click="toggleFavoritoCliente(cliente)"
+                  @click.stop="toggleFavoritoCliente(cliente)"
                   :class="{ 'favorito': cliente.favorito }"
                 >
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -147,8 +148,8 @@
                 <Dropdown 
                   :options="getProcessoOptions(cliente)" 
                   placeholderText="Selecione um processo"
-                  @dropdown-open="handleDropdownOpen(cliente.id)"
-                  @dropdown-close="handleDropdownClose(cliente.id)"
+                  @dropdown-open.stop="handleDropdownOpen(cliente.id)"
+                  @dropdown-close.stop="handleDropdownClose(cliente.id)"
                 />
               </div>
             </div>
@@ -162,7 +163,10 @@
 <script setup>
 import { ref, computed, reactive, watch } from 'vue'
 import { useClientes } from '../../composables/useClientes.js'
+import { useRouter } from 'vue-router'
 import Dropdown from '../UI/Dropdown.vue'
+
+const router = useRouter()
 
 // Props
 const props = defineProps({
@@ -337,7 +341,21 @@ watch(() => props.filtroFavoritos, (newValue) => {
 
 // Função para recarregar clientes
 const recarregarClientes = () => {
+  console.log('Recarregando lista de clientes...')
   carregarClientes()
+}
+
+// Expor o método para o componente pai
+defineExpose({
+  recarregarClientes
+})
+
+// Função para navegar para os detalhes do cliente
+const navegarParaDetalhesCliente = (cliente) => {
+  if (cliente && cliente.id) {
+    console.log('Navegando para detalhes do cliente:', cliente.id)
+    router.push(`/clientes/${cliente.id}`)
+  }
 }
 
 // Função para formatar opções de processos para o dropdown
@@ -361,12 +379,14 @@ const getProcessoOptions = (cliente) => {
 }
 
 // Funções para manipular os eventos do dropdown
-function handleDropdownOpen(clienteId) {
+const handleDropdownOpen = (clienteId) => {
   dropdownOpenMap[clienteId] = true;
+  event && event.stopPropagation && event.stopPropagation();
 }
 
-function handleDropdownClose(clienteId) {
+const handleDropdownClose = (clienteId) => {
   dropdownOpenMap[clienteId] = false;
+  event && event.stopPropagation && event.stopPropagation();
 }
 </script>
 
@@ -572,6 +592,7 @@ function handleDropdownClose(clienteId) {
   width: 100%;
   box-sizing: border-box;
   flex-wrap: nowrap;
+  cursor: pointer;
 }
 
 .cliente-item.dropdown-open {
@@ -990,7 +1011,7 @@ function handleDropdownClose(clienteId) {
   
   .processo-dropdown-mobile {
     position: relative;
-    z-index: 100;
+    z-index: 1;
   }
   
   .processo-dropdown-mobile :deep(.dropdown-container) {
@@ -1003,7 +1024,7 @@ function handleDropdownClose(clienteId) {
     top: 100%;
     left: 0;
     width: 100%;
-    z-index: 100;
+    z-index: 1;
   }
   
   /* Ajusta a altura do card quando o dropdown está aberto */

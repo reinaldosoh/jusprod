@@ -46,6 +46,45 @@ export function useClientes() {
     }
   }
 
+  // Função para buscar cliente por ID
+  const buscarClientePorId = async (clienteId) => {
+    if (!clienteId) return { success: false, message: 'ID do cliente não fornecido' }
+    
+    try {
+      loading.value = true
+      error.value = null
+      
+      console.log('🔍 Buscando cliente por ID:', clienteId)
+      
+      const { data, error: supabaseError } = await supabase
+        .from('clientes')
+        .select(`
+          *,
+          representante_legais(
+            id,
+            nome_completo,
+            email
+          )
+        `)
+        .eq('id', clienteId)
+        .single()
+      
+      if (supabaseError) throw supabaseError
+      
+      console.log('✅ Cliente encontrado:', data)
+      
+      return { success: true, data }
+    } catch (err) {
+      console.error('Erro ao buscar cliente:', err)
+      error.value = err.message
+      return { success: false, message: err.message }
+    } finally {
+      loading.value = false
+    }
+  }
+
+
+
   // Função para atualizar status do cliente
   const atualizarStatusCliente = async (clienteId, novoStatus) => {
     try {
@@ -147,6 +186,7 @@ export function useClientes() {
     carregarClientes,
     atualizarStatusCliente,
     toggleFavorito,
-    excluirCliente
+    excluirCliente,
+    buscarClientePorId
   }
 } 

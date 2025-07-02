@@ -29,7 +29,7 @@ defineEmits(['toggle-favorito'])
   position: absolute;
   top: 12px;
   left: 16px;
-  z-index: 10;
+  z-index: 1;
 }
 
 .favorito-btn {
@@ -44,7 +44,7 @@ defineEmits(['toggle-favorito'])
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
-  z-index: 10;
+  z-index: 1;
 }
 
 .favorito-btn:hover {
@@ -61,7 +61,7 @@ defineEmits(['toggle-favorito'])
   stroke-width: 2 !important;
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
-  z-index: 20 !important;
+  z-index: 1 !important;
   position: relative !important;
   color: #fbbf24;
 }

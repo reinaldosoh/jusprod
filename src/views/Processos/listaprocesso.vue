@@ -195,9 +195,7 @@
       </div>
 
       <!-- Estado vazio -->
-      <div v-else-if="processosFiltrados.length === 0" class="empty-state">
-        <p>Nenhum processo {{ activeTab === 'monitorados' ? 'monitorado' : 'não monitorado' }} encontrado.</p>
-      </div>
+      <EmptyProcesso v-else-if="processosFiltrados.length === 0" />
     </div>
 
     <!-- Paginação -->
@@ -406,6 +404,7 @@ import emailProcesso from '../../components/UI/Email_processo.vue'
 import agendaProcesso from '../../components/UI/agenda_processo.vue'
 import lembreteProcesso from '../../components/UI/Lembrete_processo.vue'
 import DeixarMonitorarProcesso from '../../components/UI/Deixar_monitorar_processo.vue'
+import EmptyProcesso from '../../components/UI/empty_processo.vue'
 import { eventBus, EVENTS } from '../../utils/eventBus'
 
 const props = defineProps({

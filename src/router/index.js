@@ -84,6 +84,12 @@ const routes = [
     meta: { requiresAuth: true, requiresOnboarding: true }
   },
   {
+    path: '/clientes/:id',
+    name: 'detalhesCliente',
+    component: () => import('../views/Clientes/DetalhesCliente/DetalhesCliente.vue'),
+    meta: { requiresAuth: true, requiresOnboarding: true }
+  },
+  {
     path: '/documentos',
     name: 'documentos',
     component: () => import('../views/Documentos/Documentos.vue'),

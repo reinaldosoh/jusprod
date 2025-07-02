@@ -1,8 +1,8 @@
 <template>
-  <div class="cliente-card">
+  <div class="cliente-card" @click="navegarParaDetalhes">
     <!-- Botões de ação -->
     <div class="acoes-container">
-      <button class="botao-favorito" @click="toggleFavoritoCliente">
+      <button class="botao-favorito" @click.stop="toggleFavoritoCliente">
         <!-- Estrela preenchida quando favorito (azul do sistema) -->
         <svg v-if="cliente.favorito" width="18" height="18" viewBox="0 0 24 24" fill="#0468FA" stroke="#0468FA" stroke-width="1.5">
           <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26 12,2"/>
@@ -14,7 +14,7 @@
       </button>
       
       <div class="botoes-direita">
-        <button class="botao-editar" @click="$emit('editar', cliente)">
+        <button class="botao-editar" @click.stop="$emit('editar', cliente)">
           <!-- Ícone de editar -->
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5">
             <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -22,7 +22,7 @@
           </svg>
         </button>
         
-        <button class="botao-excluir" @click="$emit('excluir', cliente)">
+        <button class="botao-excluir" @click.stop="$emit('excluir', cliente)">
           <!-- Ícone de lixeira -->
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.5">
             <path d="M3 6h18"/>
@@ -83,6 +83,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useRouter } from 'vue-router'
 
 const props = defineProps({
   cliente: {
@@ -90,6 +91,8 @@ const props = defineProps({
     required: true
   }
 })
+
+const router = useRouter()
 
 const emits = defineEmits(['editar', 'excluir', 'toggle-favorito'])
 
@@ -109,6 +112,11 @@ const iniciais = computed(() => {
 const toggleFavoritoCliente = () => {
   // Emite o evento para o componente pai lidar com a atualização
   emits('toggle-favorito', props.cliente)
+}
+
+// Função para navegar para a página de detalhes do cliente
+const navegarParaDetalhes = () => {
+  router.push(`/clientes/${props.cliente.id}`)
 }
 </script>
 
@@ -142,7 +150,7 @@ const toggleFavoritoCliente = () => {
   display: flex;
   align-items: center;
   gap: 12px;
-  z-index: 10;
+  z-index: 0;
 }
 
 .botao-favorito {

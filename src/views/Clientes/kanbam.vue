@@ -40,6 +40,7 @@
               @editar="handleEditarCliente"
               @excluir="handleExcluirCliente"
               @toggle-favorito="handleToggleFavorito"
+              @click="navegarParaDetalhesCliente(cliente)"
             />
           </TransitionGroup>
         </div>
@@ -71,6 +72,7 @@
               @editar="handleEditarCliente"
               @excluir="handleExcluirCliente"
               @toggle-favorito="handleToggleFavorito"
+              @click="navegarParaDetalhesCliente(cliente)"
             />
           </TransitionGroup>
         </div>
@@ -102,6 +104,7 @@
               @editar="handleEditarCliente"
               @excluir="handleExcluirCliente"
               @toggle-favorito="handleToggleFavorito"
+              @click="navegarParaDetalhesCliente(cliente)"
             />
           </TransitionGroup>
         </div>
@@ -111,9 +114,10 @@
 </template>
 
 <script setup>
-import { onMounted, computed, TransitionGroup, watch } from 'vue'
-import ClienteCard from '../../components/UI/ClienteCard.vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useClientes } from '../../composables/useClientes.js'
+import ClienteCard from '../../components/UI/ClienteCard.vue'
 
 // Props para receber o filtro de favoritos do componente pai
 const props = defineProps({
@@ -127,17 +131,34 @@ const props = defineProps({
   }
 });
 
+const router = useRouter()
+
 const {
+  clientes,
   clientesNovo: clientesNovoOriginal,
   clientesAndamento: clientesAndamentoOriginal,
   clientesFinalizado: clientesFinalizadoOriginal,
-  loading,
-  error,
   carregarClientes,
   atualizarStatusCliente,
+  toggleFavorito,
   excluirCliente,
-  toggleFavorito
+  loading,
+  error
 } = useClientes()
+
+// Define o que será exposto para o componente pai
+defineExpose({
+  // Expor a função já existente para permitir que seja chamada de fora
+  carregarClientes
+})
+
+// Função para navegar para a página de detalhes do cliente
+const navegarParaDetalhesCliente = (cliente) => {
+  if (cliente && cliente.id) {
+    console.log('Navegando para detalhes do cliente:', cliente.id)
+    router.push(`/clientes/${cliente.id}`)
+  }
+}
 
 // Estado para drag and drop
 let draggedCliente = null

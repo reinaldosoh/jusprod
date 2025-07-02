@@ -1,5 +1,9 @@
 <template>
   <div class="filtro-cliente-container">
+    <!-- Formulários de cadastro de cliente -->  
+    <FormularioPF v-if="showFormPF" @close="closeForm" @clienteSalvo="handleClienteSalvo" @switchToPJ="switchToPJ" @switchToLote="switchToLote" />
+    <FormularioPJ v-if="showFormPJ" @close="closeForm" @clienteSalvo="handleClienteSalvo" @switchToPF="switchToPF" @switchToLote="switchToLote" />
+    <FormularioLote v-if="showFormLote" @close="closeFormLote" @clientesSalvos="handleClientesSalvos" @switchToPF="switchToPF" @switchToPJ="switchToPJ" />
     <!-- Barra de Filtros -->
     <div class="filters-bar">
       <!-- Lado Esquerdo: Título, Ícones, Dropdown e Input -->
@@ -50,32 +54,60 @@
         </div>
       </div>
 
-      <!-- Lado Direito: Botão Novo Cliente -->
+      <!-- Lado Direito: Botões de Ação -->
       <div class="filters-right">
-        <button class="novo-cliente-btn" @click="handleNewClient">
-          <div class="plus-icon-container">
-            <!-- Plus SVG -->
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" class="plus-icon">
-              <path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              <path d="M12 5v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </div>
-          <span class="button-text">Novo cliente</span>
-        </button>
+        <div class="action-buttons">
+          <!-- Botão Novo Cliente -->
+          <button class="novo-cliente-btn" @click="handleNewClient">
+            <div class="plus-icon-container">
+              <!-- Plus SVG -->
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" class="plus-icon">
+                <path d="M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M12 5v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <span class="button-text">Novo cliente</span>
+          </button>
+
+          <!-- Botão Importar Clientes -->
+          <button class="importar-clientes-btn" @click="handleImportClients">
+            <div class="import-icon-container">
+              <!-- Upload SVG -->
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" class="import-icon">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7,10 12,15 17,10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+            </div>
+            <span class="button-text">Importar</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import Dropdown from '../../components/UI/Dropdown.vue'
 import IconesBarra from '../../components/UI/IconesBarra.vue'
+import FormularioPF from './FormularioPF.vue'
+import FormularioPJ from './FormularioPJ.vue'
+import FormularioLote from './FormularioLote.vue'
 
 const searchQuery = ref('')
 const formattedSearchQuery = ref('')
 const selectedFilter = ref({ id: 1, label: 'Nome' })
 const activeView = ref('kanban')
+const showFormPF = ref(false)
+const showFormPJ = ref(false)
+const showFormLote = ref(false)
+
+console.log('📋 filtro_cliente.vue carregado!', {
+  showFormPF: showFormPF.value,
+  showFormPJ: showFormPJ.value, 
+  showFormLote: showFormLote.value
+})
 
 // Opções do dropdown
 const dropdownOptions = ref([
@@ -88,7 +120,7 @@ const dropdownOptions = ref([
 ])
 
 // Emits para comunicação com componente pai
-const emit = defineEmits(['filter-change', 'view-change', 'new-client'])
+const emit = defineEmits(['filter-change', 'view-change', 'new-client', 'client-saved'])
 
 const handleViewChange = (view) => {
   activeView.value = view
@@ -113,7 +145,53 @@ const handleDropdownChange = (option) => {
 }
 
 const handleNewClient = () => {
-  emit('new-client')
+  console.log('🆕 handleNewClient chamado!')
+  // Sempre abre FormularioPF por padrão
+  showFormPF.value = true
+  console.log('🆕 showFormPF definido como true:', showFormPF.value)
+}
+
+const handleImportClients = () => {
+  // Abre FormularioLote
+  showFormLote.value = true
+}
+
+// Função para trocar de PF para PJ
+const switchToPJ = () => {
+  console.log('Fechando formulários e abrindo FormularioPJ...')
+  showFormPF.value = false
+  showFormLote.value = false
+  showFormPJ.value = true
+}
+
+// Função para trocar de PJ para PF
+const switchToPF = () => {
+  console.log('Fechando formulários e abrindo FormularioPF...')
+  showFormPJ.value = false
+  showFormLote.value = false
+  showFormPF.value = true
+}
+
+// Função para trocar para FormularioLote
+const switchToLote = async () => {
+  console.log('🚀 switchToLote chamada! Estados atuais:', {
+    showFormPF: showFormPF.value,
+    showFormPJ: showFormPJ.value,
+    showFormLote: showFormLote.value
+  })
+  
+  showFormPF.value = false
+  showFormPJ.value = false
+  
+  await nextTick()
+  
+  showFormLote.value = true
+  
+  console.log('🎯 Novos estados após nextTick:', {
+    showFormPF: showFormPF.value,
+    showFormPJ: showFormPJ.value,
+    showFormLote: showFormLote.value
+  })
 }
 
 const handleIconAction = (action, value) => {
@@ -123,6 +201,38 @@ const handleIconAction = (action, value) => {
     console.log('Filtrando por favoritos:', value)
     emit('filter-change', { type: 'favorites', value: value })
   }
+}
+
+const closeForm = () => {
+  showFormPF.value = false
+  showFormPJ.value = false
+}
+
+const closeFormLote = () => {
+  showFormLote.value = false
+}
+
+const handleClienteSalvo = (dadosCliente) => {
+  console.log('Cliente salvo no filtro:', dadosCliente)
+  showFormPF.value = false
+  showFormPJ.value = false
+  
+  // Emitir evento específico para cliente salvo
+  emit('client-saved', dadosCliente)
+  
+  // Também emite o filtro atual para recarregar a lista
+  emit('filter-change', selectedFilter.value)
+}
+
+const handleClientesSalvos = (dadosImportacao) => {
+  console.log('Clientes importados:', dadosImportacao)
+  showFormLote.value = false
+  
+  // Emitir evento específico para clientes importados
+  emit('client-saved', dadosImportacao)
+  
+  // Também emite o filtro atual para recarregar a lista
+  emit('filter-change', selectedFilter.value)
 }
 
 // Função para aplicar máscara de CPF: ###.###.###-##
@@ -278,6 +388,13 @@ const getPlaceholderText = computed(() => {
 .filters-right {
   display: flex;
   align-items: center;
+}
+
+/* Action Buttons Container */
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 /* Grupo de Ícones - CORRIGIDO PARA GARANTIR QUE APAREÇAM */
@@ -463,6 +580,59 @@ const getPlaceholderText = computed(() => {
   color: #3b82f6;
 }
 
+/* Botão Importar Clientes */
+.importar-clientes-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 44px;
+  padding: 0.5rem 1rem;
+  background: #3b82f6;
+  border: 1px solid #3b82f6;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Inter', sans-serif;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.importar-clientes-btn:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+}
+
+.importar-clientes-btn:active {
+  transform: translateY(0);
+}
+
+.import-icon {
+  color: white !important;
+  stroke: white !important;
+  stroke-width: 2.5;
+}
+
+.import-icon-container {
+  width: 20px;
+  height: 20px;
+  background: #3b82f6;
+  border: 1px solid white;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.importar-clientes-btn .button-text {
+  color: white;
+}
+
 /* Responsividade */
 @media (max-width: 768px) {
   .filtro-cliente-container {
@@ -511,6 +681,17 @@ const getPlaceholderText = computed(() => {
   .novo-cliente-btn {
     width: 100%;
     justify-content: center;
+  }
+
+  .importar-clientes-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
   }
 
   .title {
@@ -567,6 +748,10 @@ const getPlaceholderText = computed(() => {
   }
 
   .novo-cliente-btn {
+    height: 40px;
+  }
+
+  .importar-clientes-btn {
     height: 40px;
   }
 }

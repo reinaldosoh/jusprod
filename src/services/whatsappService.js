@@ -49,6 +49,7 @@ export const whatsappService = {
           cliente:clientes(
             id,
             nome,
+            empresa,
             lista_whatsapp
           )
         `)
@@ -68,46 +69,108 @@ export const whatsappService = {
       if (clientesVinculados && clientesVinculados.length > 0) {
         for (const vinculo of clientesVinculados) {
           const cliente = vinculo.cliente;
-          if (cliente && cliente.lista_whatsapp) {
-            let listaWhatsapp = [];
-            try {
-              listaWhatsapp = typeof cliente.lista_whatsapp === 'string'
-                ? JSON.parse(cliente.lista_whatsapp)
-                : Array.isArray(cliente.lista_whatsapp)
-                ? cliente.lista_whatsapp
-                : [cliente.lista_whatsapp];
-            } catch (e) {
-              console.warn(`Erro ao parsear lista_whatsapp do cliente ${cliente.id}:`, e);
-              continue;
+          if (cliente) {
+            // 3.1. Processar WhatsApps do cliente principal
+            if (cliente.lista_whatsapp) {
+              let listaWhatsapp = [];
+              try {
+                listaWhatsapp = typeof cliente.lista_whatsapp === 'string'
+                  ? JSON.parse(cliente.lista_whatsapp)
+                  : Array.isArray(cliente.lista_whatsapp)
+                  ? cliente.lista_whatsapp
+                  : [cliente.lista_whatsapp];
+              } catch (e) {
+                console.warn(`Erro ao parsear lista_whatsapp do cliente ${cliente.id}:`, e);
+                continue;
+              }
+
+              for (const whatsapp of listaWhatsapp) {
+                if (whatsapp && typeof whatsapp === 'string' && whatsapp.trim()) {
+                  const dadosBase = {
+                    cnpj: processo.cnpj || '',
+                    autor: processo.autor || '',
+                    reu: processo.reu || '',
+                    tribunal: processo.tribunal || '',
+                    area: processo.area || '',
+                    classe: processo.classe || '',
+                    assunto: processo.assunto || '',
+                    orgao_julgador: processo.orgao_julgador || '',
+                    valor_causa: processo.valor_causa || '',
+                    titulo,
+                    mensagem,
+                    whatsapp: whatsapp.trim(),
+                  };
+
+                  // Adicionar campos específicos da intimação se presente
+                  if (intimacao) {
+                    dadosBase.snippet = intimacao.snippet || '';
+                    dadosBase.secao = intimacao.secao || '';
+                    dadosBase.tipo = intimacao.tipo || '';
+                    dadosBase.conteudo = removerHTML(intimacao.conteudo) || '';
+                    dadosBase.dscPequena = intimacao.dscPequena || '';
+                  }
+
+                  whatsappsParaEnvio.push(dadosBase);
+                }
+              }
             }
 
-            for (const whatsapp of listaWhatsapp) {
-              if (whatsapp && typeof whatsapp === 'string' && whatsapp.trim()) {
-                const dadosBase = {
-                  cnpj: processo.cnpj || '',
-                  autor: processo.autor || '',
-                  reu: processo.reu || '',
-                  tribunal: processo.tribunal || '',
-                  area: processo.area || '',
-                  classe: processo.classe || '',
-                  assunto: processo.assunto || '',
-                  orgao_julgador: processo.orgao_julgador || '',
-                  valor_causa: processo.valor_causa || '',
-                  titulo,
-                  mensagem,
-                  whatsapp: whatsapp.trim(),
-                };
+            // 3.2. Se for empresa, buscar WhatsApps dos representantes legais
+            if (cliente.empresa === true) {
+              console.log('🏢 Cliente é empresa, buscando representantes legais:', cliente.nome);
+              
+              try {
+                // Obter sessão para garantir que buscamos representantes do usuário correto
+                const { data: { session } } = await supabase.auth.getSession();
+                
+                if (session?.user?.id) {
+                  const { data: representantes, error: repError } = await supabase
+                    .from('representante_legais')
+                    .select('whatsapp, nome_completo')
+                    .eq('cliente_id', cliente.id)
+                    .eq('uuid', session.user.id); // Garantir que é do usuário logado
 
-                // Adicionar campos específicos da intimação se presente
-                if (intimacao) {
-                  dadosBase.snippet = intimacao.snippet || '';
-                  dadosBase.secao = intimacao.secao || '';
-                  dadosBase.tipo = intimacao.tipo || '';
-                  dadosBase.conteudo = removerHTML(intimacao.conteudo) || '';
-                  dadosBase.dscPequena = intimacao.dscPequena || '';
+                  if (repError) {
+                    console.warn('⚠️ Erro ao buscar representantes legais:', repError);
+                  } else if (representantes && representantes.length > 0) {
+                    console.log('👥 Representantes legais encontrados:', representantes.length);
+                    
+                    for (const rep of representantes) {
+                      if (rep.whatsapp && rep.whatsapp.trim()) {
+                        const dadosBase = {
+                          cnpj: processo.cnpj || '',
+                          autor: processo.autor || '',
+                          reu: processo.reu || '',
+                          tribunal: processo.tribunal || '',
+                          area: processo.area || '',
+                          classe: processo.classe || '',
+                          assunto: processo.assunto || '',
+                          orgao_julgador: processo.orgao_julgador || '',
+                          valor_causa: processo.valor_causa || '',
+                          titulo,
+                          mensagem,
+                          whatsapp: rep.whatsapp.trim(),
+                        };
+
+                        // Adicionar campos específicos da intimação se presente
+                        if (intimacao) {
+                          dadosBase.snippet = intimacao.snippet || '';
+                          dadosBase.secao = intimacao.secao || '';
+                          dadosBase.tipo = intimacao.tipo || '';
+                          dadosBase.conteudo = removerHTML(intimacao.conteudo) || '';
+                          dadosBase.dscPequena = intimacao.dscPequena || '';
+                        }
+
+                        whatsappsParaEnvio.push(dadosBase);
+                        console.log('📱 WhatsApp do representante adicionado:', rep.whatsapp, '(', rep.nome_completo, ')');
+                      }
+                    }
+                  } else {
+                    console.log('ℹ️ Nenhum representante legal encontrado para a empresa:', cliente.nome);
+                  }
                 }
-
-                whatsappsParaEnvio.push(dadosBase);
+              } catch (repError) {
+                console.warn('⚠️ Erro ao processar representantes legais:', repError);
               }
             }
           }

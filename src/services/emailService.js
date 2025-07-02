@@ -37,6 +37,7 @@ export const emailService = {
           clientes (
             id,
             nome,
+            empresa,
             lista_emails
           )
         `)
@@ -53,31 +54,64 @@ export const emailService = {
       const emailsClientes = [];
       
       if (clientesVinculados && clientesVinculados.length > 0) {
-        clientesVinculados.forEach(vinculo => {
+        for (const vinculo of clientesVinculados) {
           const cliente = vinculo.clientes;
-          if (cliente && cliente.lista_emails) {
-            try {
-              // Se lista_emails já é um array (vem do Supabase como JSON)
-              let emails = cliente.lista_emails;
-              
-              // Se for string, tentar parsear
-              if (typeof emails === 'string') {
-                emails = JSON.parse(emails);
+          if (cliente) {
+            // 4.1. Processar emails do cliente principal
+            if (cliente.lista_emails) {
+              try {
+                // Se lista_emails já é um array (vem do Supabase como JSON)
+                let emails = cliente.lista_emails;
+                
+                // Se for string, tentar parsear
+                if (typeof emails === 'string') {
+                  emails = JSON.parse(emails);
+                }
+                
+                // Garantir que é um array
+                if (Array.isArray(emails)) {
+                  emails.forEach(email => {
+                    if (email && email.trim()) {
+                      emailsClientes.push(email.trim());
+                    }
+                  });
+                }
+              } catch (parseError) {
+                console.warn('⚠️ Erro ao processar emails do cliente:', cliente.nome, parseError);
               }
+            }
+
+            // 4.2. Se for empresa, buscar emails dos representantes legais
+            if (cliente.empresa === true) {
+              console.log('🏢 Cliente é empresa, buscando representantes legais:', cliente.nome);
               
-              // Garantir que é um array
-              if (Array.isArray(emails)) {
-                emails.forEach(email => {
-                  if (email && email.trim()) {
-                    emailsClientes.push(email.trim());
-                  }
-                });
+              try {
+                const { data: representantes, error: repError } = await supabase
+                  .from('representante_legais')
+                  .select('email, nome_completo')
+                  .eq('cliente_id', cliente.id)
+                  .eq('uuid', session.user.id); // Garantir que é do usuário logado
+
+                if (repError) {
+                  console.warn('⚠️ Erro ao buscar representantes legais:', repError);
+                } else if (representantes && representantes.length > 0) {
+                  console.log('👥 Representantes legais encontrados:', representantes.length);
+                  
+                  representantes.forEach(rep => {
+                    if (rep.email && rep.email.trim()) {
+                      emailsClientes.push(rep.email.trim());
+                      console.log('📧 Email do representante adicionado:', rep.email, '(', rep.nome_completo, ')');
+                    }
+                  });
+                } else {
+                  console.log('ℹ️ Nenhum representante legal encontrado para a empresa:', cliente.nome);
+                }
+              } catch (repError) {
+                console.warn('⚠️ Erro ao processar representantes legais:', repError);
               }
-            } catch (parseError) {
-              console.warn('⚠️ Erro ao processar emails do cliente:', cliente.nome, parseError);
             }
           }
-        });
+        }
       }
 
       console.log('📧 Emails dos clientes:', emailsClientes);
@@ -224,6 +258,7 @@ export const emailService = {
           clientes (
             id,
             nome,
+            empresa,
             lista_emails
           )
         `)
@@ -240,31 +275,64 @@ export const emailService = {
       const emailsClientes = [];
       
       if (clientesVinculados && clientesVinculados.length > 0) {
-        clientesVinculados.forEach(vinculo => {
+        for (const vinculo of clientesVinculados) {
           const cliente = vinculo.clientes;
-          if (cliente && cliente.lista_emails) {
-            try {
-              // Se lista_emails já é um array (vem do Supabase como JSON)
-              let emails = cliente.lista_emails;
-              
-              // Se for string, tentar parsear
-              if (typeof emails === 'string') {
-                emails = JSON.parse(emails);
+          if (cliente) {
+            // 4.1. Processar emails do cliente principal
+            if (cliente.lista_emails) {
+              try {
+                // Se lista_emails já é um array (vem do Supabase como JSON)
+                let emails = cliente.lista_emails;
+                
+                // Se for string, tentar parsear
+                if (typeof emails === 'string') {
+                  emails = JSON.parse(emails);
+                }
+                
+                // Garantir que é um array
+                if (Array.isArray(emails)) {
+                  emails.forEach(email => {
+                    if (email && email.trim()) {
+                      emailsClientes.push(email.trim());
+                    }
+                  });
+                }
+              } catch (parseError) {
+                console.warn('⚠️ Erro ao processar emails do cliente:', cliente.nome, parseError);
               }
+            }
+
+            // 4.2. Se for empresa, buscar emails dos representantes legais
+            if (cliente.empresa === true) {
+              console.log('🏢 Cliente é empresa, buscando representantes legais:', cliente.nome);
               
-              // Garantir que é um array
-              if (Array.isArray(emails)) {
-                emails.forEach(email => {
-                  if (email && email.trim()) {
-                    emailsClientes.push(email.trim());
-                  }
-                });
+              try {
+                const { data: representantes, error: repError } = await supabase
+                  .from('representante_legais')
+                  .select('email, nome_completo')
+                  .eq('cliente_id', cliente.id)
+                  .eq('uuid', session.user.id); // Garantir que é do usuário logado
+
+                if (repError) {
+                  console.warn('⚠️ Erro ao buscar representantes legais:', repError);
+                } else if (representantes && representantes.length > 0) {
+                  console.log('👥 Representantes legais encontrados:', representantes.length);
+                  
+                  representantes.forEach(rep => {
+                    if (rep.email && rep.email.trim()) {
+                      emailsClientes.push(rep.email.trim());
+                      console.log('📧 Email do representante adicionado:', rep.email, '(', rep.nome_completo, ')');
+                    }
+                  });
+                } else {
+                  console.log('ℹ️ Nenhum representante legal encontrado para a empresa:', cliente.nome);
+                }
+              } catch (repError) {
+                console.warn('⚠️ Erro ao processar representantes legais:', repError);
               }
-            } catch (parseError) {
-              console.warn('⚠️ Erro ao processar emails do cliente:', cliente.nome, parseError);
             }
           }
-        });
+        }
       }
 
       console.log('📧 Emails dos clientes:', emailsClientes);

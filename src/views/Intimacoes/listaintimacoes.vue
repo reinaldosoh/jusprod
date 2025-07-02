@@ -169,9 +169,7 @@
       </div>
 
       <!-- Estado vazio -->
-      <div v-else-if="intimacoesFiltradas.length === 0" class="empty-state">
-        <p>Nenhuma intimação {{ activeTab === 'nao-visualizadas' ? 'não visualizada' : 'visualizada' }} encontrada.</p>
-      </div>
+      <EmptyIntimacoes v-else-if="intimacoesFiltradas.length === 0" />
     </div>
 
     <!-- Paginação -->
@@ -363,11 +361,20 @@ import agendaProcesso from '../../components/UI/agenda_processo.vue'
 import lembreteProcesso from '../../components/UI/Lembrete_processo.vue'
 import whatsappProcesso from '../../components/UI/whatsapp_processo.vue'
 import emailProcesso from '../../components/UI/Email_processo.vue'
+import EmptyIntimacoes from '../../components/UI/empty_intimacoes.vue'
 
 const props = defineProps({
   searchTerm: {
     type: String,
     default: ''
+  },
+  clienteId: {
+    type: [String, Number],
+    default: null
+  },
+  processoId: {
+    type: [String, Number],
+    default: null
   }
 })
 
@@ -605,6 +612,19 @@ const carregarIntimacoes = async (searchTerm = '') => {
       .from('intimacoes')
       .select('*')
       .eq('uuid', user.id) // FILTRO ESSENCIAL: apenas intimações do usuário autenticado
+      
+    // Aplicar filtro por processo quando processoId estiver disponível
+    if (props.processoId) {
+      console.log('🔍 Filtrando intimações pelo processo ID:', props.processoId)
+      query = query.eq('processo_id', props.processoId)
+    }
+    
+    // Aplicar filtro por cliente quando clienteId estiver disponível
+    if (props.clienteId && !props.processoId) {
+      console.log('🔍 Filtrando intimações pelo cliente ID:', props.clienteId)
+      // Aqui precisamos de uma relação entre intimações e clientes via processos
+      query = query.eq('cliente_id', props.clienteId)
+    }
 
     // Se houver termo de busca, aplicar filtros de busca
     if (searchTerm && searchTerm.trim()) {
@@ -640,10 +660,24 @@ const carregarIntimacoes = async (searchTerm = '') => {
       try {
         console.log('🔄 Tentando consulta de fallback...')
         const { data: { user } } = await supabase.auth.getUser()
-        const { data } = await supabase
+        let fallbackQuery = supabase
           .from('intimacoes')
           .select('*')
           .eq('uuid', user.id) // FILTRO ESSENCIAL: apenas intimações do usuário autenticado
+        
+        // Aplicar o mesmo filtro por processo no fallback
+        if (props.processoId) {
+          console.log('🔍 Fallback: Filtrando intimações pelo processo ID:', props.processoId)
+          fallbackQuery = fallbackQuery.eq('processo_id', props.processoId)
+        }
+        
+        // Aplicar o mesmo filtro por cliente no fallback
+        if (props.clienteId && !props.processoId) {
+          console.log('🔍 Fallback: Filtrando intimações pelo cliente ID:', props.clienteId)
+          fallbackQuery = fallbackQuery.eq('cliente_id', props.clienteId)
+        }
+        
+        const { data } = await fallbackQuery
           .order('data', { ascending: false })
           .limit(1000)
         
@@ -1199,6 +1233,15 @@ watch(() => props.searchTerm, (newSearchTerm) => {
   }, 300)
 })
 
+// Watcher para recarregar dados quando o processoId mudar
+watch(() => props.processoId, async (novoProcessoId, antigoProcessoId) => {
+  console.log('🔄 Processo ID alterado:', antigoProcessoId, '->', novoProcessoId)
+  if (novoProcessoId !== antigoProcessoId) {
+    paginaAtual.value = 1 // Resetar para a primeira página
+    await carregarIntimacoes(props.searchTerm)
+  }
+})
+
 onMounted(async () => {
   await carregarIntimacoes()
 })
@@ -1206,10 +1249,12 @@ onMounted(async () => {
 
 <style scoped>
 .lista-intimacoes-container {
+  width: 100%;
   max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem;
   background: white;
+  box-sizing: border-box;
 }
 
 /* Resultado da pesquisa */
@@ -1302,7 +1347,9 @@ onMounted(async () => {
 }
 
 .intimacao-card {
+  margin-bottom: 1.5rem;
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 1.5rem;
   padding: 1.5rem;
@@ -1311,6 +1358,8 @@ onMounted(async () => {
   border-radius: 8px;
   transition: all 0.2s ease;
   cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .intimacao-card:hover {
@@ -1347,6 +1396,8 @@ onMounted(async () => {
 .intimacao-info {
   flex: 1;
   min-width: 0;
+  width: 100%;
+  overflow-wrap: break-word;
 }
 
 .intimacao-header {
@@ -1398,25 +1449,50 @@ onMounted(async () => {
 }
 
 /* Detalhes expandidos */
-.intimacao-detalhes-expandidos {
+.intimacao-detalhes-conteudo {
   margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.conteudo-html {
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  overflow-x: auto;
+}
+
+.intimacao-detalhes-expandidos {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  width: 100%;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  box-sizing: border-box;
 }
 
 .detalhes-linha {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   font-size: 0.875rem;
   color: #374151;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  width: 100%;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .detalhes-linha .label {
-  min-width: 120px;
+  min-width: 70px;
   flex-shrink: 0;
 }
 

@@ -5,6 +5,7 @@
       @view-change="handleViewChange" 
       @filter-change="handleFilterChange"
       @new-client="handleNewClient"
+      @client-saved="clienteFoiSalvo"
     />
     
     <!-- Componente Kanban ou Lista dependendo da visualização selecionada -->
@@ -12,20 +13,38 @@
       v-if="currentView === 'kanban'" 
       :filtroFavoritos="filtroFavoritos"
       :filtroAtivo="filtroAtivo"
+      ref="kanbamRef"
     />
     <lista-clientes 
       v-else-if="currentView === 'list'" 
       :filtroFavoritos="filtroFavoritos"
       :filtroAtivo="filtroAtivo"
+      ref="listaClientesRef"
+    />
+    
+    <!-- Modal de Formulário de Cliente -->
+    <formulario-pf
+      v-if="mostrarFormulario"
+      @close="fecharFormulario"
+      @clienteSalvo="clienteFoiSalvo"
+    />
+
+    <!-- Alerta de Sucesso -->
+    <AlertaSucesso 
+      v-if="mostrarAlertaSucesso" 
+      :mensagem="mensagemSucesso" 
+      @fechar="fecharAlertaSucesso"
     />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import filtroCliente from './filtro_cliente.vue'
 import kanbam from './kanbam.vue'
 import listaClientes from '../../components/UI/listaClientes.vue'
+import formularioPF from './FormularioPF.vue'
+import AlertaSucesso from '../../components/UI/AlertaSucesso.vue'
 
 // Estado para controlar a visualização atual
 const currentView = ref('kanban')
@@ -35,6 +54,14 @@ const filtroAtivo = ref({
   tipo: 'nome',
   valor: ''
 })
+// Referências para componentes
+const kanbamRef = ref(null)
+const listaClientesRef = ref(null)
+// Estado para controlar a exibição do formulário
+const mostrarFormulario = ref(false)
+// Estado para controlar o alerta de sucesso
+const mostrarAlertaSucesso = ref(false)
+const mensagemSucesso = ref('')
 
 // Função para alternar entre visualizações
 const handleViewChange = (view) => {
@@ -76,7 +103,39 @@ const handleFilterChange = (filter) => {
 // Função para lidar com o clique no botão de novo cliente
 const handleNewClient = () => {
   console.log('Novo cliente clicado')
-  // Implementar abertura do modal/página de novo cliente
+  mostrarFormulario.value = true
+}
+
+// Fechar o formulário
+const fecharFormulario = () => {
+  mostrarFormulario.value = false
+}
+
+// Função chamada quando um cliente é salvo com sucesso
+const clienteFoiSalvo = async (dadosCliente) => {
+  console.log('Cliente foi salvo com sucesso:', dadosCliente)
+  
+  // Configurar mensagem de sucesso
+  mensagemSucesso.value = dadosCliente.mensagem || 'Cliente cadastrado com sucesso!'
+  
+  // Esperar o DOM ser atualizado
+  await nextTick()
+  
+  // Atualizar a lista de clientes ou o kanban dependendo da visualização atual
+  if (currentView.value === 'kanban' && kanbamRef.value) {
+    kanbamRef.value.carregarClientes()
+  } else if (currentView.value === 'list' && listaClientesRef.value) {
+    listaClientesRef.value.recarregarClientes()
+  }
+  
+  // Mostrar alerta de sucesso após atualizar as listas
+  mostrarAlertaSucesso.value = true
+}
+
+// Função para fechar o alerta de sucesso
+const fecharAlertaSucesso = () => {
+  mostrarAlertaSucesso.value = false
+  mensagemSucesso.value = ''
 }
 </script>
 

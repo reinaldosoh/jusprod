@@ -1,8 +1,10 @@
 <template>
   <div>
     <MenuFixo />
-    <FiltroIntimacao @search="handleSearch" />
-    <ListaIntimacoes :search-term="searchTerm" />
+    <div class="intimacoes-container">
+      <FiltroIntimacao @search="handleSearch" />
+      <ListaIntimacoes :search-term="searchTerm" />
+    </div>
   </div>
 </template>
 
@@ -17,4 +19,13 @@ const searchTerm = ref('')
 const handleSearch = (termo) => {
   searchTerm.value = termo
 }
-</script> 
+</script>
+
+<style scoped>
+.intimacoes-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+</style>

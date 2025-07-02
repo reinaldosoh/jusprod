@@ -41,7 +41,7 @@ defineEmits(['editar', 'excluir'])
   position: absolute;
   top: 12px;
   right: 16px;
-  z-index: 100;
+  z-index: 1;
 }
 
 .action-btn {
@@ -56,7 +56,7 @@ defineEmits(['editar', 'excluir'])
   cursor: pointer;
   transition: all 0.2s ease;
   position: relative;
-  z-index: 100;
+  z-index: 1;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -67,7 +67,7 @@ defineEmits(['editar', 'excluir'])
   width: 100%;
   height: 100%;
   position: relative;
-  z-index: 100;
+  z-index: 1;
 }
 
 .icon-wrapper.edit {
@@ -88,7 +88,7 @@ defineEmits(['editar', 'excluir'])
   stroke-width: 2 !important;
   stroke-linecap: round !important;
   stroke-linejoin: round !important;
-  z-index: 100 !important;
+  z-index: 1 !important;
   position: relative !important;
 }
 

@@ -23,8 +23,8 @@ const voltar = () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #fff;
-  color: #0468FA;
+  background-color: transparent;
+  color: #111827;
   border: none;
   border-radius: 4px;
   padding: 8px 12px;
@@ -32,15 +32,14 @@ const voltar = () => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .botao-voltar:hover {
-  background-color: #f5f7fa;
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .botao-voltar svg {
-  stroke: #0468FA;
+  stroke: #2563eb;
 }
 
 .botao-voltar span {

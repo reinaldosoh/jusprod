@@ -93,110 +93,7 @@
     <!-- Conteúdo das Tabs -->
     <div class="tab-content">
       <div v-if="tabAtiva === 'intimacoes'" class="tab-panel">
-        <div v-if="loadingIntimacoes" class="loading-state">
-          <div class="loading-spinner"></div>
-          <p>Carregando intimações...</p>
-        </div>
-        <div v-else-if="intimacoes.length === 0" class="empty-state">
-          Nenhuma intimação encontrada para este processo.
-        </div>
-        <div v-else class="intimacoes-list">
-          <div 
-            v-for="intimacao in intimacoes" 
-            :key="intimacao.id"
-            class="intimacao-card"
-            :class="{ 'expanded': intimacoesExpandidas.includes(intimacao.id) }"
-            @click="toggleExpandir(intimacao.id)"
-          >
-            <!-- Ícone da Intimação -->
-            <div class="intimacao-icon">
-              <svg viewBox="0 0 24 24" fill="none" :stroke="!intimacao.visualizado ? '#EF4444' : 'currentColor'" class="mail-icon">
-                <!-- Envelope -->
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                <polyline points="22,6 12,13 2,6"/>
-                <!-- Indicador de novo (se não visualizada) -->
-                <circle v-if="!intimacao.visualizado" cx="20" cy="4" r="3" fill="#EF4444"/>
-              </svg>
-            </div>
-
-            <!-- Informações da Intimação -->
-            <div class="intimacao-info">
-              <div class="intimacao-header">
-                <h3 class="intimacao-processo">{{ intimacao.cnj || 'N/A' }}</h3>
-                <span class="intimacao-status" :class="{ 'nova': !intimacao.visualizado }">
-                  {{ intimacao.visualizado ? 'Visualizada' : 'Nova' }}
-                </span>
-              </div>
-              
-              <div class="intimacao-details">
-                <p class="intimacao-titulo">
-                  <span class="label">Tipo:</span> {{ intimacao.tipo || 'N/A' }}
-                </p>
-                <p class="intimacao-data">
-                  <span class="label">Data:</span> {{ formatarData(intimacao.data) }}
-                </p>
-                <p class="intimacao-tribunal">
-                  <span class="label">Tribunal:</span> {{ intimacao.tribunal || 'N/A' }}
-                </p>
-                
-                <!-- Snippet - mostrado apenas quando não expandido -->
-                <div v-if="!intimacoesExpandidas.includes(intimacao.id) && intimacao.snippet" class="intimacao-snippet">
-                  <span class="label">Resumo:</span> {{ intimacao.snippet }}
-                </div>
-              </div>
-
-              <!-- Detalhes expandidos -->
-              <div v-if="intimacoesExpandidas.includes(intimacao.id)" class="intimacao-detalhes-expandidos">
-                <div class="detalhes-linha">
-                  <span class="label">CNJ:</span> {{ intimacao.cnj || '-' }}
-                </div>
-                <div class="detalhes-linha">
-                  <span class="label">Autor:</span> {{ intimacao.autor || '-' }}
-                </div>
-                <div class="detalhes-linha">
-                  <span class="label">Réu:</span> {{ intimacao.reu || '-' }}
-                </div>
-                <div class="detalhes-linha">
-                  <span class="label">Seção:</span> {{ intimacao.secao || '-' }}
-                </div>
-                
-                <!-- Conteúdo com HTML renderizado -->
-                <div v-if="intimacao.conteudo" class="detalhes-conteudo">
-                  <span class="label">Conteúdo:</span>
-                  <div class="conteudo-html" v-html="intimacao.conteudo"></div>
-                </div>
-
-                <div class="detalhes-linha">
-                  <span class="label">Data criação:</span> {{ formatarData(intimacao.created_at) }}
-                </div>
-              </div>
-            </div>
-
-            <!-- Ícones de Ações -->
-            <div class="intimacao-actions">
-              <!-- Ícone Expandir/Recolher -->
-              <img 
-                src="/images/iconvisualizar.svg" 
-                alt="Expandir detalhes" 
-                class="action-icon action-icon-expandir"
-                @click.stop="toggleExpandir(intimacao.id)"
-                :title="intimacoesExpandidas.includes(intimacao.id) ? 'Recolher detalhes' : 'Expandir detalhes'"
-              />
-              
-              <!-- Ícone Marcar como Visualizada -->
-              <button 
-                v-if="!intimacao.visualizado"
-                class="action-icon action-icon-check"
-                @click.stop="marcarComoVisualizada(intimacao.id)"
-                title="Marcar como visualizada"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M20 6L9 17l-5-5" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
+        <ListaIntimacoes :clienteId="clienteId" :processoId="processoSelecionado?.id" />
       </div>
       
       <div v-if="tabAtiva === 'documentos'" class="tab-panel">
@@ -231,6 +128,13 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { supabase } from '../../../lib/supabase'
 import { Scale } from 'lucide-vue-next'
+import ListaIntimacoes from '../../Intimacoes/listaintimacoes.vue'
+
+const props = defineProps({
+  cliente: Object
+})
+
+const emit = defineEmits(['processo-selecionado'])
 
 const route = useRoute()
 const clienteId = computed(() => route.params.id)
@@ -281,6 +185,8 @@ const carregarProcessos = async () => {
     if (processos.value.length > 0) {
       processoSelecionado.value = processos.value[0]
       carregarIntimacoes()
+      // Emitir evento para o componente pai
+      emit('processo-selecionado', processos.value[0])
     }
   } catch (error) {
     console.error('Erro ao carregar processos:', error)
@@ -320,6 +226,8 @@ const selecionarProcesso = (processo) => {
   processoSelecionado.value = processo
   dropdownAberto.value = false
   carregarIntimacoes()
+  // Emitir evento para o componente pai
+  emit('processo-selecionado', processo)
 }
 
 // Fechar dropdown ao clicar fora

@@ -24,22 +24,15 @@
     
     <div class="acoes">
       <button class="acao-btn" @click.stop="$emit('editar')">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="1.5">
-          <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-          <path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/>
-        </svg>
+        <img src="/images/editDetalhes.svg" alt="Editar" width="20" height="20">
       </button>
       
       <button class="acao-btn" @click.stop="$emit('conversar')">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="1.5">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
+        <img src="/images/msgDetalhes.svg" alt="Mensagem" width="20" height="20">
       </button>
       
       <button class="acao-btn" @click.stop="$emit('expandir')">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4b5563" stroke-width="1.5">
-          <path d="m6 9 6 6 6-6"/>
-        </svg>
+        <img src="/images/setaDetalhes.svg" alt="Expandir" width="20" height="20">
       </button>
     </div>
   </div>
@@ -96,7 +89,8 @@ const getStatusClass = computed(() => {
   height: 113px;
   background: #FFFFFF;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.03);
   padding: 16px;
   display: flex;
   justify-content: space-between;

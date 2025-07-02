@@ -44,7 +44,7 @@ defineEmits(['fechar']);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 10001 !important;
 }
 
 .alerta-sucesso {
