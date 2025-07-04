@@ -204,7 +204,7 @@ router.beforeEach(async (to, from, next) => {
   let user = null
   
   try {
-    // Verifica se o usuário está autenticado
+  // Verifica se o usuário está autenticado
     const { data, error } = await supabase.auth.getSession()
     
     // Se houve erro na sessão, tratar como não autenticado
@@ -218,9 +218,9 @@ router.beforeEach(async (to, from, next) => {
     
     isAuthenticated = !!data.session
     user = data.session?.user
-    
-    // Se não está autenticado e a rota requer autenticação
-    if (requiresAuth && !isAuthenticated) {
+  
+  // Se não está autenticado e a rota requer autenticação
+  if (requiresAuth && !isAuthenticated) {
       console.log('🔄 Usuário não autenticado - redirecionando para login')
       next({ name: 'login' })
       return;
@@ -229,8 +229,8 @@ router.beforeEach(async (to, from, next) => {
     console.error('❌ Erro no middleware de autenticação:', error)
     // Se houve erro e a rota requer autenticação, redirecionar para login
     if (requiresAuth) {
-      next({ name: 'login' })
-      return;
+    next({ name: 'login' })
+    return;
     }
   }
   

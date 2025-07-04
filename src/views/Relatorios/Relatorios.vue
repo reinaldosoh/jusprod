@@ -19,11 +19,12 @@
     <div class="filtro-relatorios-spacing">
       <FiltroRelatorios 
         :titulo-pasta="pastaSelecionada.titulo"
-        :mostrar-busca="true"
+        :mostrar-busca="mostrarBuscaRelatorio"
         :mostrar-botao-novo="mostrarBotaoNovoRelatorio"
         :pasta-id="pastaSelecionada.tipo === 'usuario' ? pastaSelecionada.id : null"
         @buscar="handleBuscarRelatorio"
         @novo-relatorio="handleNovoRelatorio"
+        @carregar-relatorio="handleCarregarRelatorio"
         @relatorio-criado="handleRelatorioCriado"
         @erro="handleErroRelatorio"
         ref="filtroRelatoriosRef"
@@ -67,6 +68,46 @@
       @pasta-editada-sucesso="handlePastaEditadaSucesso"
     />
 
+    <!-- Modal Carregar Arquivo -->
+    <CarregarArquivo
+      :is-visible="mostrarCarregarArquivo"
+      :pasta-id="pastaSelecionada.tipo === 'usuario' ? pastaSelecionada.id : null"
+      @fechar="fecharCarregarArquivo"
+      @arquivo-carregado="handleArquivoCarregado"
+      @erro="handleErroRelatorio"
+    />
+
+    <!-- Modal Visualizador de Arquivo -->
+    <VisualizadorFile
+      :is-visible="mostrarVisualizadorFile"
+      :relatorio="relatorioParaVisualizar"
+      @fechar="fecharVisualizadorFile"
+    />
+
+    <!-- Modal Renomear/Duplicar Relatório -->
+    <RenomearArquivo
+      v-if="mostrarModalRenomear && relatorioParaDuplicar"
+      :relatorio="relatorioParaDuplicar"
+      @close="fecharModalRenomear"
+      @relatorio-duplicado="handleRelatorioDuplicado"
+    />
+
+    <!-- Modal Mover Relatório -->
+    <MoverArquivoPasta
+      v-if="mostrarModalMover && relatorioParaMover"
+      :relatorio="relatorioParaMover"
+      @close="fecharModalMover"
+      @relatorio-movido="handleRelatorioMovido"
+    />
+
+    <!-- Modal Confirmar Exclusão -->
+    <ConfirmarExclusaoRelatorio
+      v-if="mostrarModalExclusao && relatorioParaExcluir"
+      :relatorio="relatorioParaExcluir"
+      @cancelar="fecharModalExclusao"
+      @excluir="handleRelatorioExcluido"
+    />
+
     <!-- Alerta de Sucesso -->
     <AlertaSucesso 
       v-if="mostrarSucessoDocumento"
@@ -91,9 +132,14 @@ import FiltroRelatorios from './filtroRelatorios.vue'
 import ListaRelatoriosPadrao from './listaRelatoriosPadrao.vue'
 import ListaRelatoriosCliente from './listaRelatoriosCliente.vue'
 import EditarPasta from './editarPasta.vue'
+import CarregarArquivo from './carregarArquivo.vue'
 import AlertaSucesso from '../../components/UI/AlertaSucesso.vue'
 import AlertaErro from '../../components/UI/AlertaErro.vue'
 import MenuFixo from '../../components/UI/MenuFixo.vue'
+import VisualizadorFile from './visualizadorFile.vue'
+import RenomearArquivo from './renomearArquivo.vue'
+import MoverArquivoPasta from './mover_Arquivo_Pasta.vue'
+import ConfirmarExclusaoRelatorio from '../../components/UI/ConfirmarExclusaoRelatorio.vue'
 
 const searchTerm = ref('')
 const pastaSelecionada = ref({ tipo: 'sistema', id: 'modelos-relatorios', titulo: 'Modelos padrão' })
@@ -104,10 +150,21 @@ const listaRelatoriosClienteRef = ref(null)
 const mostrarSucessoDocumento = ref(false)
 const mostrarAlertaErro = ref(false)
 const mostrarEditarPasta = ref(false)
+const mostrarCarregarArquivo = ref(false)
 const mensagemErro = ref('')
 const mensagemSucesso = ref('Pasta de relatórios criada com sucesso!')
 const termoBusca = ref('')
 const pastaEditando = ref({ id: null, nome: '' })
+
+// Novos estados para funcionalidades completas
+const mostrarVisualizadorFile = ref(false)
+const relatorioParaVisualizar = ref(null)
+const mostrarModalRenomear = ref(false)
+const relatorioParaDuplicar = ref(null)
+const mostrarModalMover = ref(false)
+const relatorioParaMover = ref(null)
+const mostrarModalExclusao = ref(false)
+const relatorioParaExcluir = ref(null)
 
 // Computed para mostrar relatórios padrão apenas quando pasta sistema estiver ativa
 const mostrarRelatoriosPadrao = computed(() => {
@@ -121,6 +178,11 @@ const mostrarRelatoriosCliente = computed(() => {
 
 // Computed para mostrar botão "Novo relatório" apenas em pastas de usuário
 const mostrarBotaoNovoRelatorio = computed(() => {
+  return pastaSelecionada.value && pastaSelecionada.value.tipo === 'usuario'
+})
+
+// Computed para mostrar campo de busca apenas em pastas de usuário (não mostrar na pasta "Modelos padrão")
+const mostrarBuscaRelatorio = computed(() => {
   return pastaSelecionada.value && pastaSelecionada.value.tipo === 'usuario'
 })
 
@@ -150,24 +212,37 @@ const handleNovaPasta = () => {
   console.log('Abrindo modal para nova pasta de relatórios')
 }
 
-const handlePastaCriada = () => {
+const handlePastaCriada = async () => {
   console.log('Pasta de relatórios criada, recarregando lista...')
   mensagemSucesso.value = 'Pasta de relatórios criada com sucesso!'
   mostrarSucessoDocumento.value = true
-  recarregarPastas()
+  await recarregarPastas(false) // Recarga completa para nova pasta
 }
 
-const recarregarPastas = () => {
+const recarregarPastas = async (forcarQuantidades = false) => {
   if (listaPastasRef.value) {
-    listaPastasRef.value.recarregar()
+    if (forcarQuantidades) {
+      console.log('📁 Forçando atualização das quantidades...')
+      await listaPastasRef.value.forcarAtualizacaoQuantidades()
+    } else {
+      console.log('📁 Recarregando lista completa...')
+      await listaPastasRef.value.recarregar()
+    }
   }
 }
 
 const handlePastaSelecionada = (pastaInfo) => {
   pastaSelecionada.value = pastaInfo
+  // Limpar termo de busca ao trocar de pasta
+  termoBusca.value = ''
+  // Limpar também o campo de busca no filtro
+  if (filtroRelatoriosRef.value) {
+    filtroRelatoriosRef.value.limparBusca()
+  }
   console.log('📁 Pasta de relatório selecionada:', pastaInfo)
   console.log('📊 Mostrar relatórios padrão:', mostrarRelatoriosPadrao.value)
   console.log('👤 Mostrar relatórios cliente:', mostrarRelatoriosCliente.value)
+  console.log('🔍 Mostrar busca:', mostrarBuscaRelatorio.value)
 }
 
 const handleEditarPasta = (pastaInfo) => {
@@ -199,51 +274,337 @@ const handleNovoRelatorio = () => {
   // Implementar lógica para criar novo relatório
 }
 
+const handleCarregarRelatorio = () => {
+  console.log('Carregar arquivo de relatório')
+  mostrarCarregarArquivo.value = true
+}
+
+const fecharCarregarArquivo = () => {
+  mostrarCarregarArquivo.value = false
+}
+
+const handleArquivoCarregado = async (relatorio) => {
+  console.log('✅ Arquivo de relatório carregado:', relatorio)
+  
+  // Primeiro fechar o modal
+  fecharCarregarArquivo()
+  
+  // Aguardar um momento para garantir que o modal foi fechado
+  await new Promise(resolve => setTimeout(resolve, 200))
+  
+  // Depois mostrar mensagem de sucesso
+  mensagemSucesso.value = 'Relatório carregado com sucesso!'
+  mostrarSucessoDocumento.value = true
+  
+  // Aguardar mais um pouco para garantir que a transação no banco foi commitada
+  await new Promise(resolve => setTimeout(resolve, 500))
+  
+  // Recarregar dados - fazer sequencialmente para garantir que não haja conflitos
+  try {
+    console.log('🔄 Iniciando recarregamento das listas...')
+    
+    // 1. Primeiro forçar atualização das quantidades das pastas
+    if (listaPastasRef.value) {
+      console.log('📁 Forçando atualização das quantidades das pastas...')
+      await listaPastasRef.value.forcarAtualizacaoQuantidades()
+      console.log('✅ Quantidades das pastas atualizadas')
+    }
+    
+    // 2. Depois recarregar lista de relatórios do cliente se estiver ativa
+    if (listaRelatoriosClienteRef.value && mostrarRelatoriosCliente.value) {
+      console.log('📊 Recarregando lista de relatórios...')
+      await listaRelatoriosClienteRef.value.recarregar()
+      console.log('✅ Lista de relatórios recarregada')
+    }
+    
+    console.log('🎉 Todas as listas foram recarregadas com sucesso!')
+    
+  } catch (error) {
+    console.error('⚠️ Erro ao recarregar listas (não crítico):', error)
+    // Não mostrar erro para o usuário pois o arquivo foi carregado com sucesso
+  }
+}
+
 const handleErroRelatorio = (erro) => {
-  console.error('Erro com relatório:', erro)
-  mensagemErro.value = erro
+  console.error('❌ Erro com relatório:', erro)
+  
+  // Melhorar a mensagem de erro para o usuário
+  let mensagemAmigavel = 'Erro desconhecido ao processar relatório'
+  
+  if (typeof erro === 'string') {
+    if (erro.includes('Bucket not found')) {
+      mensagemAmigavel = 'Erro de configuração do sistema. Contate o suporte.'
+    } else if (erro.includes('Falha no upload')) {
+      mensagemAmigavel = 'Falha no upload do arquivo. Tente novamente.'
+    } else if (erro.includes('Falha ao salvar no banco')) {
+      mensagemAmigavel = 'Erro ao salvar dados. Verifique sua conexão.'
+    } else if (erro.includes('Usuário não autenticado')) {
+      mensagemAmigavel = 'Sessão expirada. Faça login novamente.'
+    } else {
+      mensagemAmigavel = erro
+    }
+  }
+  
+  mensagemErro.value = mensagemAmigavel
   mostrarAlertaErro.value = true
 }
 
 // Handlers para ações dos relatórios do cliente
-const handleVisualizarRelatorio = (relatorio) => {
-  console.log('Visualizar relatório:', relatorio)
-  // Implementar lógica para visualizar relatório
+const handleVisualizarRelatorio = async (relatorio) => {
+  try {
+    console.log('📄 Visualizando relatório:', relatorio)
+    console.log('🔍 Tipo isFile:', relatorio.isFile)
+    
+    // Se for arquivo carregado (isFile: true), usar visualizador de arquivo
+    if (relatorio.isFile) {
+      console.log('📁 Abrindo visualizador de arquivo')
+      relatorioParaVisualizar.value = relatorio
+      mostrarVisualizadorFile.value = true
+    } else {
+      // Se for relatório HTML (isFile: false), exibir em nova aba ou modal HTML
+      console.log('📝 Abrindo relatório HTML')
+      // Para relatórios HTML, abrir em nova aba
+      if (relatorio.html) {
+        const htmlContent = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>${relatorio.nome}</title>
+            <meta charset="UTF-8">
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+              h1, h2, h3 { color: #333; }
+            </style>
+          </head>
+          <body>
+            <h1>${relatorio.nome}</h1>
+            <div>${relatorio.html}</div>
+          </body>
+          </html>
+        `
+        const blob = new Blob([htmlContent], { type: 'text/html' })
+        const url = URL.createObjectURL(blob)
+        window.open(url, '_blank')
+        setTimeout(() => URL.revokeObjectURL(url), 1000)
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Erro ao visualizar relatório:', error)
+    mensagemErro.value = 'Erro ao visualizar relatório'
+    mostrarAlertaErro.value = true
+  }
 }
 
 const handleDuplicarRelatorio = (relatorio) => {
   console.log('Duplicar relatório:', relatorio)
-  // Implementar lógica para duplicar relatório
+  relatorioParaDuplicar.value = relatorio
+  mostrarModalRenomear.value = true
 }
 
 const handleMoverRelatorio = (relatorio) => {
   console.log('Mover relatório:', relatorio)
-  // Implementar lógica para mover relatório
+  relatorioParaMover.value = relatorio
+  mostrarModalMover.value = true
 }
 
 const handleEnviarRelatorio = (relatorio) => {
   console.log('Enviar relatório:', relatorio)
-  // Implementar lógica para enviar relatório
+  // TODO: Implementar envio por email/WhatsApp
+  mensagemErro.value = 'Funcionalidade de envio ainda não implementada'
+  mostrarAlertaErro.value = true
 }
 
-const handleExportarRelatorio = (relatorio) => {
+const handleExportarRelatorio = async (relatorio) => {
   console.log('Exportar relatório:', relatorio)
-  // Implementar lógica para exportar relatório
+  
+  try {
+    if (relatorio.isFile && relatorio.url) {
+      // Para arquivos, fazer download direto
+      const link = document.createElement('a')
+      link.href = relatorio.url
+      link.download = relatorio.nome || 'relatorio'
+      link.target = '_blank'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } else if (relatorio.html) {
+      // Para relatórios HTML, exportar como PDF
+      const { jsPDF } = await import('jspdf')
+      const html2canvas = (await import('html2canvas')).default
+      
+      // Criar elemento temporário para renderizar o HTML
+      const tempDiv = document.createElement('div')
+      tempDiv.innerHTML = relatorio.html
+      tempDiv.style.cssText = `
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+        width: 600px;
+        font-family: Arial, sans-serif;
+        font-size: 12px;
+        line-height: 1.5;
+        color: #333;
+        padding: 20px;
+        background: white;
+      `
+      document.body.appendChild(tempDiv)
+      
+      // Converter para canvas
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      })
+      
+      document.body.removeChild(tempDiv)
+      
+      // Criar PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      })
+      
+      // Adicionar título
+      pdf.setFontSize(16)
+      pdf.setTextColor(4, 104, 250)
+      pdf.text(relatorio.nome, 105, 20, { align: 'center' })
+      
+      // Adicionar imagem
+      const imgData = canvas.toDataURL('image/png')
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const imgWidth = pageWidth - 40
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      
+      pdf.addImage(imgData, 'PNG', 20, 30, imgWidth, imgHeight)
+      
+      // Salvar
+      const nomeArquivo = `${relatorio.nome.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`
+      pdf.save(nomeArquivo)
+    }
+    
+  } catch (error) {
+    console.error('Erro ao exportar relatório:', error)
+    mensagemErro.value = 'Erro ao exportar relatório em PDF'
+    mostrarAlertaErro.value = true
+  }
 }
 
 const handleHistoricoRelatorio = (relatorio) => {
   console.log('Histórico relatório:', relatorio)
-  // Implementar lógica para histórico do relatório
+  // TODO: Implementar histórico de versões
+  mensagemErro.value = 'Funcionalidade de histórico ainda não implementada'
+  mostrarAlertaErro.value = true
 }
 
 const handleExcluirRelatorio = (relatorio) => {
   console.log('Excluir relatório:', relatorio)
-  // Implementar lógica para excluir relatório
+  relatorioParaExcluir.value = relatorio
+  mostrarModalExclusao.value = true
 }
 
-const handleAcoesRelatorio = (dadosAcao) => {
-  console.log('Ações relatório:', dadosAcao)
-  // Implementar lógica para outras ações do relatório
+const handleAcoesRelatorio = ({ acao, relatorio }) => {
+  console.log('Ação selecionada:', acao, 'para relatório:', relatorio)
+  
+  switch (acao) {
+    case 'visualizar':
+      handleVisualizarRelatorio(relatorio)
+      break
+    case 'duplicar':
+      handleDuplicarRelatorio(relatorio)
+      break
+    case 'mover':
+      handleMoverRelatorio(relatorio)
+      break
+    case 'exportar':
+      handleExportarRelatorio(relatorio)
+      break
+    case 'excluir':
+      handleExcluirRelatorio(relatorio)
+      break
+    default:
+      console.warn('Ação não reconhecida:', acao)
+  }
+}
+
+// Handlers para modais dos relatórios
+const fecharVisualizadorFile = () => {
+  mostrarVisualizadorFile.value = false
+  relatorioParaVisualizar.value = null
+}
+
+const fecharModalRenomear = () => {
+  mostrarModalRenomear.value = false
+  relatorioParaDuplicar.value = null
+}
+
+const handleRelatorioDuplicado = async (novoRelatorio) => {
+  console.log('✅ Relatório duplicado:', novoRelatorio)
+  
+  fecharModalRenomear()
+  mensagemSucesso.value = 'Relatório duplicado com sucesso!'
+  mostrarSucessoDocumento.value = true
+  
+  // Recarregar listas
+  try {
+    await recarregarPastas(true) // Forçar atualização das quantidades
+    
+    if (listaRelatoriosClienteRef.value && mostrarRelatoriosCliente.value) {
+      await listaRelatoriosClienteRef.value.recarregar()
+    }
+  } catch (error) {
+    console.error('Erro ao recarregar listas:', error)
+  }
+}
+
+const fecharModalMover = () => {
+  mostrarModalMover.value = false
+  relatorioParaMover.value = null
+}
+
+const handleRelatorioMovido = async (dadosMovimento) => {
+  console.log('✅ Relatório movido:', dadosMovimento)
+  
+  fecharModalMover()
+  mensagemSucesso.value = `Relatório movido para "${dadosMovimento.pastaDestinoTitulo}" com sucesso!`
+  mostrarSucessoDocumento.value = true
+  
+  // Recarregar listas
+  try {
+    await recarregarPastas(true) // Forçar atualização das quantidades
+    
+    if (listaRelatoriosClienteRef.value && mostrarRelatoriosCliente.value) {
+      await listaRelatoriosClienteRef.value.recarregar()
+    }
+  } catch (error) {
+    console.error('Erro ao recarregar listas:', error)
+  }
+}
+
+const fecharModalExclusao = () => {
+  mostrarModalExclusao.value = false
+  relatorioParaExcluir.value = null
+}
+
+const handleRelatorioExcluido = async () => {
+  console.log('✅ Relatório excluído com sucesso')
+  
+  fecharModalExclusao()
+  mensagemSucesso.value = 'Relatório excluído com sucesso!'
+  mostrarSucessoDocumento.value = true
+  
+  // Recarregar listas
+  try {
+    await recarregarPastas(true) // Forçar atualização das quantidades
+    
+    if (listaRelatoriosClienteRef.value && mostrarRelatoriosCliente.value) {
+      await listaRelatoriosClienteRef.value.recarregar()
+    }
+  } catch (error) {
+    console.error('Erro ao recarregar listas:', error)
+  }
 }
 
 const fecharEditarPasta = () => {
@@ -410,8 +771,8 @@ const handlePastaEditadaSucesso = async (dadosAtualizacao) => {
   // Aguardar um pouco para garantir que foi aplicado
   await nextTick()
   
-  // DEPOIS: Recarregar as pastas
-  recarregarPastas()
+  // DEPOIS: Recarregar as pastas (usar recarga completa para edição de pasta)
+  await recarregarPastas(false)
   
   console.log('📊 Estado FINAL:', {
     pastaSelecionada: pastaSelecionada.value,

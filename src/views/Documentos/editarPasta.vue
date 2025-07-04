@@ -153,8 +153,11 @@ async function salvarPasta() {
       return
     }
     
-    // Sucesso - emitir evento e fechar modal
-    emit('pasta-editada-sucesso')
+    // Sucesso - emitir evento com o nome atualizado e fechar modal
+    emit('pasta-editada-sucesso', {
+      id: props.pastaId,
+      novoNome: nomePasta.value.trim()
+    })
     emit('close')
     
   } catch (error) {

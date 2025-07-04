@@ -80,20 +80,59 @@ const getQuantidadeRelatoriosSistema = async () => {
 
 const getPastasRelatoriosComContagem = async () => {
   try {
+    console.log('📊 [listaPastas] Buscando pastas com contagem...')
     const { supabase } = await import('../../lib/supabase.js')
-    const { data, error } = await supabase
+    
+    // Tentar primeiro a view otimizada
+    let { data, error } = await supabase
       .from('view_pastas_relatorios_com_contagem')
       .select('*')
       .order('created_at', { ascending: false })
     
     if (error) {
-      console.error('Erro ao buscar pastas de relatórios:', error)
-      return []
+      console.error('❌ [listaPastas] Erro ao buscar pastas de relatórios via view:', error)
+      
+      // Fallback: buscar diretamente das tabelas
+      console.log('🔄 [listaPastas] Tentando busca direta...')
+      const { data: pastasData, error: pastasError } = await supabase
+        .from('pasta_relatorios')
+        .select(`
+          id,
+          titulo,
+          created_at,
+          uuid
+        `)
+        .order('created_at', { ascending: false })
+      
+      if (pastasError) {
+        console.error('❌ [listaPastas] Erro ao buscar pastas diretamente:', pastasError)
+        return []
+      }
+      
+      // Para cada pasta, contar relatórios
+      const pastasComContagem = await Promise.all(
+        pastasData.map(async (pasta) => {
+          const { count } = await supabase
+            .from('relatorios')
+            .select('*', { count: 'exact', head: true })
+            .eq('pasta_id', pasta.id)
+          
+          return {
+            ...pasta,
+            quantidade_relatorios: count || 0
+          }
+        })
+      )
+      
+      data = pastasComContagem
     }
+    
+    console.log('📊 [listaPastas] Pastas encontradas:', data?.length || 0)
+    console.log('📊 [listaPastas] Detalhes das pastas:', data)
     
     return data || []
   } catch (error) {
-    console.error('Erro ao buscar pastas de relatórios:', error)
+    console.error('❌ [listaPastas] Erro ao buscar pastas de relatórios:', error)
     return []
   }
 }
@@ -102,6 +141,7 @@ const getPastasRelatoriosComContagem = async () => {
 const carregarDados = async () => {
   try {
     loading.value = true
+    console.log('🔄 [listaPastas] Iniciando carregamento dos dados...')
     
     // Buscar quantidade de relatórios do sistema e pastas (paralelo)
     const [qtdSistema, pastasData] = await Promise.all([
@@ -112,11 +152,16 @@ const carregarDados = async () => {
     quantidadeRelatoriosSistema.value = qtdSistema
     pastasUsuario.value = pastasData
     
-    console.log('📊 Dados carregados - Relatórios sistema:', qtdSistema)
-    console.log('📁 Pastas de relatórios:', pastasData)
+    console.log('📊 [listaPastas] Dados carregados - Relatórios sistema:', qtdSistema)
+    console.log('📁 [listaPastas] Pastas de relatórios:', pastasData)
+    
+    // Forçar reatividade
+    await new Promise(resolve => setTimeout(resolve, 50))
+    
+    console.log('✅ [listaPastas] Carregamento concluído com sucesso!')
     
   } catch (error) {
-    console.error('Erro ao carregar dados das pastas de relatórios:', error)
+    console.error('❌ [listaPastas] Erro ao carregar dados das pastas de relatórios:', error)
   } finally {
     loading.value = false
   }
@@ -169,9 +214,40 @@ const handleEditarPasta = (pastaInfo) => {
   emit('editar-pasta', pastaInfo)
 }
 
+// Função para forçar atualização das quantidades
+const forcarAtualizacaoQuantidades = async () => {
+  try {
+    console.log('🔄 [listaPastas] Forçando atualização das quantidades...')
+    
+    const { supabase } = await import('../../lib/supabase.js')
+    
+    // Buscar quantidades atualizadas diretamente
+    const pastasAtualizadas = await Promise.all(
+      pastasUsuario.value.map(async (pasta) => {
+        const { count } = await supabase
+          .from('relatorios')
+          .select('*', { count: 'exact', head: true })
+          .eq('pasta_id', pasta.id)
+        
+        return {
+          ...pasta,
+          quantidade_relatorios: count || 0
+        }
+      })
+    )
+    
+    pastasUsuario.value = pastasAtualizadas
+    console.log('✅ [listaPastas] Quantidades atualizadas:', pastasAtualizadas)
+    
+  } catch (error) {
+    console.error('❌ [listaPastas] Erro ao atualizar quantidades:', error)
+  }
+}
+
 // Expor função para recarregar (para quando nova pasta for criada)
 defineExpose({
   recarregar: carregarDados,
+  forcarAtualizacaoQuantidades,
   selecionarPasta: (pastaId, isPastaSistema = false) => {
     if (isPastaSistema) {
       pastaAtivaSelecionada.value = 'modelos-relatorios'

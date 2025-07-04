@@ -156,7 +156,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, triggerRef } from 'vue'
 import FiltroPasta from './filtroPasta.vue'
 import ListaPastas from './listaPastas.vue'
 import FiltroDocumentos from './filtroDocumentos.vue'
@@ -251,7 +251,21 @@ const fecharModalEditarPasta = () => {
   pastaParaEditar.value = null
 }
 
-const handlePastaEditadaSucesso = () => {
+const handlePastaEditadaSucesso = async (dadosAtualizacao) => {
+  // Atualizar o título da pasta selecionada se os dados forem fornecidos
+  if (dadosAtualizacao && dadosAtualizacao.novoNome) {
+    // Método direto: atualizar o título da pasta selecionada
+    if (pastaSelecionada.value && pastaSelecionada.value.id == dadosAtualizacao.id) {
+      pastaSelecionada.value.titulo = dadosAtualizacao.novoNome
+      tituloPastaSelecionada.value = dadosAtualizacao.novoNome
+      
+      // Forçar reatividade usando múltiplas técnicas
+      await nextTick()
+      triggerRef(pastaSelecionada)
+      pastaSelecionada.value = { ...pastaSelecionada.value, titulo: dadosAtualizacao.novoNome }
+    }
+  }
+  
   mostrarSucessoEdicao.value = true
 }
 

@@ -34,7 +34,26 @@
             </div>
             <span class="button-text">Novo relatório</span>
           </button>
+          
+          <!-- Componente seletor de tipo de arquivo (aparece 8px abaixo do botão) -->
+          <div 
+            v-if="mostrarTiposArquivo" 
+            class="tipo-arquivo-dropdown"
+          >
+            <TipodeArquivo 
+              v-model="tipoArquivoSelecionado" 
+              @criar-documento="criarDocumento" 
+              @carregar-arquivo="carregarArquivo"
+            />
+          </div>
         </div>
+        
+        <!-- Overlay para fechar dropdown -->
+        <div 
+          v-if="mostrarTiposArquivo" 
+          class="overlay" 
+          @click="fecharDropdown"
+        ></div>
       </div>
     </div>
   </div>
@@ -42,6 +61,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import TipodeArquivo from './tipodeArquivo.vue'
 
 const props = defineProps({
   tituloPasta: {
@@ -65,19 +85,40 @@ const props = defineProps({
 const emit = defineEmits(['buscar', 'novo-relatorio', 'criar-relatorio', 'carregar-relatorio', 'relatorio-criado', 'erro'])
 
 const termoBusca = ref('')
+const mostrarTiposArquivo = ref(false)
+const tipoArquivoSelecionado = ref(null)
 
 const handleBusca = () => {
   emit('buscar', termoBusca.value)
 }
 
 const abrirNovoRelatorio = () => {
-  console.log('Abrir novo relatório')
-  emit('novo-relatorio')
+  mostrarTiposArquivo.value = !mostrarTiposArquivo.value
+  console.log('Abrir seletor de tipo de relatório')
+}
+
+const fecharDropdown = () => {
+  mostrarTiposArquivo.value = false
+  tipoArquivoSelecionado.value = null
 }
 
 const limparBusca = () => {
   termoBusca.value = ''
   emit('buscar', '')
+}
+
+// Função para criar documento de relatório
+const criarDocumento = () => {
+  console.log('Criar documento de relatório')
+  emit('criar-relatorio', { tipo: 'documento' })
+  fecharDropdown()
+}
+
+// Função para carregar arquivo de relatório
+const carregarArquivo = () => {
+  console.log('Carregar arquivo de relatório')
+  emit('carregar-relatorio')
+  fecharDropdown()
 }
 
 // Expor função para componente pai
@@ -130,6 +171,7 @@ defineExpose({
   gap: 1rem;
   flex-shrink: 0;
   margin-top: 10px;
+  justify-content: flex-end;
 }
 
 .search-container, .button-container {
@@ -137,6 +179,10 @@ defineExpose({
   align-items: center;
   gap: 0.5rem;
   width: 100%;
+}
+
+.button-container {
+  position: relative;
 }
 
 .busca-input-wrapper {
@@ -226,11 +272,32 @@ defineExpose({
   flex-shrink: 0;
 }
 
-.button-text {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #3b82f6;
-}
+  .button-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #3b82f6;
+  }
+
+  /* Estilos para o dropdown do tipo de arquivo */
+  .tipo-arquivo-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    z-index: 1000;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+
+  .overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: transparent;
+    z-index: 999;
+  }
 
 /* Responsivo */
 @media (max-width: 1024px) {
@@ -263,6 +330,7 @@ defineExpose({
     flex-direction: column;
     gap: 1rem;
     width: 100%;
+    align-items: center;
   }
   
   .search-container, .button-container {
@@ -323,5 +391,29 @@ defineExpose({
     max-width: 100%;
     box-sizing: border-box;
   }
-}
-</style> 
+
+  /* Responsividade para o dropdown */
+  .tipo-arquivo-dropdown {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: auto;
+  }
+  
+      .overlay {
+      background: rgba(0, 0, 0, 0.3);
+    }
+  }
+
+  /* Quando apenas o botão estiver visível (sem busca) */
+  .filtro-actions:has(.button-container):not(:has(.search-container)) {
+    justify-content: center;
+  }
+
+  @media (max-width: 768px) {
+    .filtro-actions:has(.button-container):not(:has(.search-container)) {
+      align-items: center;
+    }
+  }
+  </style> 

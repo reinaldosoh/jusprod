@@ -96,11 +96,12 @@ const carregarRelatoriosPasta = async () => {
   if (!props.pastaId) {
     relatorios.value = []
     relatoriosOriginal.value = []
-    return
+    return { success: true, data: [] }
   }
 
   try {
     loading.value = true
+    console.log('🔄 Carregando relatórios para pasta ID:', props.pastaId)
     
     // Importar supabase
     const { supabase } = await import('../../lib/supabase.js')
@@ -108,23 +109,28 @@ const carregarRelatoriosPasta = async () => {
     // Buscar relatórios da pasta
     const { data, error } = await supabase
       .from('relatorios')
-      .select('id, nome, html, pasta_id, created_at, url, "isFile", cliente_id')
+      .select('id, nome, html, pasta_id, created_at, url, "isFile", cliente_id, categoria, tipo')
       .eq('pasta_id', props.pastaId)
       .order('created_at', { ascending: false })
     
     if (error) {
-      throw error
+      console.error('❌ Erro na query do Supabase:', error)
+      throw new Error(`Falha ao buscar relatórios: ${error.message}`)
     }
     
     relatoriosOriginal.value = data || []
     aplicarFiltro()
     
-    console.log('📊 Relatórios carregados para pasta:', props.pastaId, '- Total:', data?.length || 0)
+    console.log('✅ Relatórios carregados para pasta:', props.pastaId, '- Total:', data?.length || 0)
+    return { success: true, data: data || [] }
     
   } catch (error) {
-    console.error('Erro ao carregar relatórios da pasta:', error)
+    console.error('❌ Erro ao carregar relatórios da pasta:', error)
     relatorios.value = []
     relatoriosOriginal.value = []
+    
+    // Retornar erro em vez de só logar
+    return { success: false, error: error.message }
   } finally {
     loading.value = false
   }

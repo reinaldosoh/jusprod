@@ -217,7 +217,7 @@ export const authService = {
         throw error;
       }
       
-      return data;
+    return data;
     } catch (error) {
       // Tratar erro de autenticação
       handleAuthError(error, 'getSession');
