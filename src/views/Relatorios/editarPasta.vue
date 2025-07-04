@@ -14,10 +14,10 @@
       </div>
 
       <!-- Título -->
-      <h2 class="titulo">Criar pasta</h2>
+      <h2 class="titulo">Editar nome da pasta</h2>
 
       <!-- Subtítulo -->
-      <p class="subtitulo">Dê um nome a esta pasta de relatórios</p>
+      <p class="subtitulo">Dê um novo nome a esta pasta de relatórios</p>
 
       <!-- Input com ícone -->
       <div class="input-container">
@@ -49,7 +49,7 @@
           label="Salvar" 
           type="primary" 
           button-type="button"
-          :disabled="loading || !nomePasta.trim()"
+          :disabled="loading || !nomePasta.trim() || nomePasta.trim() === nomeOriginal"
           @click="salvarPasta"
         />
       </div>
@@ -58,19 +58,37 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/auth'
 import Button from '../../components/UI/Button.vue'
 
-const emit = defineEmits(['close', 'pasta-criada', 'pasta-criada-sucesso'])
+const props = defineProps({
+  pastaId: {
+    type: [Number, String],
+    required: true
+  },
+  nomeAtual: {
+    type: String,
+    required: true
+  }
+})
+
+const emit = defineEmits(['close', 'pasta-editada-sucesso'])
 
 const { user } = useAuthStore()
 const nomePasta = ref('')
+const nomeOriginal = ref('')
 const loading = ref(false)
 const mostrarErro = ref(false)
 
-// Função para verificar se nome já existe
+// Inicializar com nome atual
+watch(() => props.nomeAtual, (novoNome) => {
+  nomePasta.value = novoNome
+  nomeOriginal.value = novoNome
+}, { immediate: true })
+
+// Função para verificar se nome já existe (exceto a própria pasta)
 async function verificarNomeExistente(nome) {
   try {
     if (!user.value?.id) {
@@ -83,6 +101,7 @@ async function verificarNomeExistente(nome) {
       .select('id')
       .eq('uuid', user.value.id)
       .eq('titulo', nome.trim())
+      .neq('id', props.pastaId) // Excluir a própria pasta
       .limit(1)
 
     if (error) {
@@ -100,6 +119,7 @@ async function verificarNomeExistente(nome) {
 // Função para salvar a pasta
 async function salvarPasta() {
   if (!nomePasta.value.trim()) return
+  if (nomePasta.value.trim() === nomeOriginal.value) return
   
   loading.value = true
   mostrarErro.value = false
@@ -120,25 +140,26 @@ async function salvarPasta() {
       return
     }
     
-    // Criar nova pasta de relatórios
-    const { data, error } = await supabase
+    // Atualizar pasta de relatórios
+    const { error } = await supabase
       .from('pasta_relatorios')
-      .insert({
-        titulo: nomePasta.value.trim(),
-        uuid: user.value.id
-      })
-      .select()
+      .update({ titulo: nomePasta.value.trim() })
+      .eq('id', props.pastaId)
+      .eq('uuid', user.value.id)
     
     if (error) {
-      console.error('Erro ao criar pasta de relatórios:', error)
-      alert('Erro ao criar a pasta de relatórios. Tente novamente.')
+      console.error('Erro ao editar pasta de relatórios:', error)
+      alert('Erro ao editar a pasta de relatórios. Tente novamente.')
       return
     }
     
-    console.log('✅ Pasta de relatórios criada:', data)
+    console.log('✅ Pasta de relatórios editada com sucesso')
     
-    // Sucesso - emitir evento com sucesso e fechar modal
-    emit('pasta-criada-sucesso')
+    // Sucesso - emitir evento com o nome atualizado e fechar modal
+    emit('pasta-editada-sucesso', {
+      id: props.pastaId,
+      novoNome: nomePasta.value.trim()
+    })
     emit('close')
     
   } catch (error) {
