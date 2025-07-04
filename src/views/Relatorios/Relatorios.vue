@@ -84,7 +84,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import FiltroPasta from './filtroPasta.vue'
 import ListaPastas from './listaPastas.vue'
 import FiltroRelatorios from './filtroRelatorios.vue'
@@ -123,6 +123,15 @@ const mostrarRelatoriosCliente = computed(() => {
 const mostrarBotaoNovoRelatorio = computed(() => {
   return pastaSelecionada.value && pastaSelecionada.value.tipo === 'usuario'
 })
+
+// Watch para observar mudanças no título da pasta selecionada
+watch(() => pastaSelecionada.value.titulo, (novoTitulo, tituloAnterior) => {
+  console.log('📝 Título da pasta mudou:', {
+    anterior: tituloAnterior,
+    novo: novoTitulo,
+    pastaSelecionada: pastaSelecionada.value
+  })
+}, { deep: true })
 
 const handleSearch = (term) => {
   searchTerm.value = term
@@ -236,8 +245,14 @@ const fecharEditarPasta = () => {
 
 const atualizarTituloPastaEditada = async () => {
   try {
+    console.log('🔄 Iniciando atualização do título da pasta...')
+    console.log('📊 Pasta selecionada:', pastaSelecionada.value)
+    console.log('📝 Pasta editando:', pastaEditando.value)
+    
     // Só atualizar se estivermos na pasta editada
     if (pastaSelecionada.value.tipo === 'usuario' && pastaSelecionada.value.id === pastaEditando.value.id) {
+      console.log('✅ Condições atendidas, buscando novo nome...')
+      
       // Buscar o novo nome da pasta no banco
       const { supabase } = await import('../../lib/supabase.js')
       const { data, error } = await supabase
@@ -247,31 +262,44 @@ const atualizarTituloPastaEditada = async () => {
         .single()
       
       if (error) {
-        console.error('Erro ao buscar nome atualizado da pasta:', error)
+        console.error('❌ Erro ao buscar nome atualizado da pasta:', error)
         return
       }
       
       if (data) {
-        // Atualizar o título da pasta selecionada
-        pastaSelecionada.value.titulo = data.titulo
-        console.log('✅ Título da pasta atualizado:', data.titulo)
+        console.log('📝 Nome encontrado no banco:', data.titulo)
+        console.log('📝 Nome atual na pasta selecionada:', pastaSelecionada.value.titulo)
+        
+        // Atualizar o título da pasta selecionada - forçando reatividade
+        pastaSelecionada.value = {
+          ...pastaSelecionada.value,
+          titulo: data.titulo
+        }
+        console.log('✅ Título da pasta atualizado para:', data.titulo)
       }
+    } else {
+      console.log('⚠️ Não é necessário atualizar - pasta não corresponde')
     }
   } catch (error) {
-    console.error('Erro ao atualizar título da pasta:', error)
+    console.error('❌ Erro ao atualizar título da pasta:', error)
   }
 }
 
 const handlePastaEditadaSucesso = async () => {
-  console.log('Pasta de relatórios editada com sucesso!')
+  console.log('🎉 Pasta de relatórios editada com sucesso!')
   mensagemSucesso.value = 'Pasta de relatórios editada com sucesso!'
   mostrarSucessoDocumento.value = true
   
   // Recarregar as pastas
   recarregarPastas()
   
-  // Buscar o novo nome da pasta editada e atualizar o título
-  await atualizarTituloPastaEditada()
+  // Aguardar o próximo tick para garantir que o recarregamento foi concluído
+  await nextTick()
+  
+  // Adicionar um pequeno delay para garantir que o recarregamento das pastas foi concluído
+  setTimeout(async () => {
+    await atualizarTituloPastaEditada()
+  }, 100)
 }
 
 const fecharSucessoDocumento = () => {
