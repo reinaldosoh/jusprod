@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { translateError } from '../utils/errorTranslator';
+import { handleAuthError } from '../utils/authInterceptor';
 
 // Constante para armazenamento local
 const STORAGE_KEY = 'jusprod_session_preference';
@@ -50,6 +51,9 @@ const loginCache = {
   }
 };
 
+// Exportar loginCache para uso em outros lugares
+export { loginCache };
+
 // Função para verificar e cachear status completo no login
 async function initializeUserStatus(userId) {
   try {
@@ -85,6 +89,8 @@ async function initializeUserStatus(userId) {
     
   } catch (error) {
     console.error('❌ Erro ao inicializar status:', error);
+    // Tratar erro de autenticação
+    handleAuthError(error, 'initializeUserStatus');
     return { emailValidado: false, onboardingFinalizado: false };
   }
 }
@@ -202,8 +208,21 @@ export const authService = {
    * @returns {Promise<{user, session}>} - Dados do usuário e sessão
    */
   async getSession() {
-    const { data } = await supabase.auth.getSession();
-    return data;
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        // Tratar erro de autenticação
+        handleAuthError(error, 'getSession');
+        throw error;
+      }
+      
+      return data;
+    } catch (error) {
+      // Tratar erro de autenticação
+      handleAuthError(error, 'getSession');
+      throw error;
+    }
   },
   
   /**
@@ -303,6 +322,6 @@ export const authService = {
   }
 };
 
-export { loginCache, initializeUserStatus };
+export { initializeUserStatus };
 
 export default authService;

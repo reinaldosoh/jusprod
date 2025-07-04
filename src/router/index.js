@@ -200,15 +200,38 @@ router.beforeEach(async (to, from, next) => {
   const requiresEmailValidation = to.matched.some(record => record.meta.requiresEmailValidation)
   const requiresOnboarding = to.matched.some(record => record.meta.requiresOnboarding)
   
-  // Verifica se o usuário está autenticado
-  const { data } = await supabase.auth.getSession()
-  const isAuthenticated = !!data.session
-  const user = data.session?.user
+  let isAuthenticated = false
+  let user = null
   
-  // Se não está autenticado e a rota requer autenticação
-  if (requiresAuth && !isAuthenticated) {
-    next({ name: 'login' })
-    return;
+  try {
+    // Verifica se o usuário está autenticado
+    const { data, error } = await supabase.auth.getSession()
+    
+    // Se houve erro na sessão, tratar como não autenticado
+    if (error) {
+      console.error('❌ Erro ao verificar sessão:', error)
+      if (requiresAuth) {
+        next({ name: 'login' })
+        return;
+      }
+    }
+    
+    isAuthenticated = !!data.session
+    user = data.session?.user
+    
+    // Se não está autenticado e a rota requer autenticação
+    if (requiresAuth && !isAuthenticated) {
+      console.log('🔄 Usuário não autenticado - redirecionando para login')
+      next({ name: 'login' })
+      return;
+    }
+  } catch (error) {
+    console.error('❌ Erro no middleware de autenticação:', error)
+    // Se houve erro e a rota requer autenticação, redirecionar para login
+    if (requiresAuth) {
+      next({ name: 'login' })
+      return;
+    }
   }
   
   // Se está autenticado e tenta acessar login/cadastro, redirecionar conforme status
