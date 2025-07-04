@@ -84,7 +84,7 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, watch } from 'vue'
+import { ref, computed, nextTick, watch, triggerRef } from 'vue'
 import FiltroPasta from './filtroPasta.vue'
 import ListaPastas from './listaPastas.vue'
 import FiltroRelatorios from './filtroRelatorios.vue'
@@ -126,10 +126,18 @@ const mostrarBotaoNovoRelatorio = computed(() => {
 
 // Watch para observar mudanças no título da pasta selecionada
 watch(() => pastaSelecionada.value.titulo, (novoTitulo, tituloAnterior) => {
-  console.log('📝 Título da pasta mudou:', {
+  console.log('📝 WATCH: Título da pasta mudou:', {
     anterior: tituloAnterior,
     novo: novoTitulo,
     pastaSelecionada: pastaSelecionada.value
+  })
+}, { deep: true, immediate: true })
+
+// Watch para observar mudanças no objeto completo pastaSelecionada
+watch(pastaSelecionada, (novaPasta, pastaAnterior) => {
+  console.log('📝 WATCH: Pasta selecionada mudou:', {
+    anterior: pastaAnterior,
+    nova: novaPasta
   })
 }, { deep: true })
 
@@ -245,13 +253,14 @@ const fecharEditarPasta = () => {
 
 const atualizarTituloPastaEditada = async () => {
   try {
-    console.log('🔄 Iniciando atualização do título da pasta...')
-    console.log('📊 Pasta selecionada:', pastaSelecionada.value)
-    console.log('📝 Pasta editando:', pastaEditando.value)
+    console.log('🔄 INICIANDO ATUALIZAÇÃO DO TÍTULO...')
+    console.log('📊 Pasta selecionada ID:', pastaSelecionada.value.id)
+    console.log('📝 Pasta editando ID:', pastaEditando.value.id)
+    console.log('📝 Pasta editando nome:', pastaEditando.value.nome)
     
-    // Só atualizar se estivermos na pasta editada
+    // Verificar se estamos na pasta que foi editada
     if (pastaSelecionada.value.tipo === 'usuario' && pastaSelecionada.value.id === pastaEditando.value.id) {
-      console.log('✅ Condições atendidas, buscando novo nome...')
+      console.log('✅ CONDIÇÕES ATENDIDAS - Buscando novo nome...')
       
       // Buscar o novo nome da pasta no banco
       const { supabase } = await import('../../lib/supabase.js')
@@ -262,44 +271,79 @@ const atualizarTituloPastaEditada = async () => {
         .single()
       
       if (error) {
-        console.error('❌ Erro ao buscar nome atualizado da pasta:', error)
+        console.error('❌ ERRO ao buscar nome atualizado da pasta:', error)
         return
       }
       
-      if (data) {
-        console.log('📝 Nome encontrado no banco:', data.titulo)
-        console.log('📝 Nome atual na pasta selecionada:', pastaSelecionada.value.titulo)
+      if (data && data.titulo) {
+        const tituloAnterior = pastaSelecionada.value.titulo
+        const novoTitulo = data.titulo
         
-        // Atualizar o título da pasta selecionada - forçando reatividade
+        console.log('📝 TÍTULO ANTERIOR:', tituloAnterior)
+        console.log('📝 TÍTULO NOVO:', novoTitulo)
+        
+        // MÉTODO 1: Atualizar diretamente
+        pastaSelecionada.value.titulo = novoTitulo
+        
+        // MÉTODO 2: Forçar reatividade
+        triggerRef(pastaSelecionada)
+        
+        // MÉTODO 3: Criar novo objeto (força reatividade)
         pastaSelecionada.value = {
           ...pastaSelecionada.value,
-          titulo: data.titulo
+          titulo: novoTitulo
         }
-        console.log('✅ Título da pasta atualizado para:', data.titulo)
+        
+        console.log('✅ TÍTULO ATUALIZADO COM SUCESSO!')
+        console.log('✅ Pasta selecionada final:', pastaSelecionada.value)
+        
+        // Aguardar um momento para garantir que a atualização foi aplicada
+        await nextTick()
+        
+        return true
       }
     } else {
-      console.log('⚠️ Não é necessário atualizar - pasta não corresponde')
+      console.log('⚠️ NÃO É NECESSÁRIO ATUALIZAR - pasta não corresponde')
+      console.log('⚠️ Tipo:', pastaSelecionada.value.tipo)
+      console.log('⚠️ ID pasta selecionada:', pastaSelecionada.value.id)
+      console.log('⚠️ ID pasta editando:', pastaEditando.value.id)
     }
   } catch (error) {
-    console.error('❌ Erro ao atualizar título da pasta:', error)
+    console.error('❌ ERRO FATAL ao atualizar título da pasta:', error)
   }
+  
+  return false
 }
 
 const handlePastaEditadaSucesso = async () => {
-  console.log('🎉 Pasta de relatórios editada com sucesso!')
+  console.log('🎉 PASTA EDITADA COM SUCESSO!')
+  console.log('📊 Estado ANTES da atualização:', {
+    pastaSelecionada: pastaSelecionada.value,
+    pastaEditando: pastaEditando.value
+  })
+  
   mensagemSucesso.value = 'Pasta de relatórios editada com sucesso!'
   mostrarSucessoDocumento.value = true
   
-  // Recarregar as pastas
-  recarregarPastas()
+  // PRIMEIRA COISA: Atualizar o título imediatamente
+  const tituloAtualizado = await atualizarTituloPastaEditada()
   
-  // Aguardar o próximo tick para garantir que o recarregamento foi concluído
+  if (tituloAtualizado) {
+    console.log('✅ TÍTULO ATUALIZADO COM SUCESSO!')
+  } else {
+    console.log('⚠️ TÍTULO NÃO FOI ATUALIZADO')
+  }
+  
+  // Aguardar um pouco para garantir que foi aplicado
   await nextTick()
   
-  // Adicionar um pequeno delay para garantir que o recarregamento das pastas foi concluído
-  setTimeout(async () => {
-    await atualizarTituloPastaEditada()
-  }, 100)
+  // DEPOIS: Recarregar as pastas
+  recarregarPastas()
+  
+  console.log('📊 Estado FINAL:', {
+    pastaSelecionada: pastaSelecionada.value,
+    pastaEditando: pastaEditando.value
+  })
 }
 
 const fecharSucessoDocumento = () => {
