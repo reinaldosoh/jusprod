@@ -106,6 +106,7 @@ const fecharSucesso = () => {
   border-bottom: 1px solid #e5e7eb;
   max-width: 1280px;
   margin: 0 auto;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
 .filtro-header {
@@ -179,7 +180,7 @@ const fecharSucesso = () => {
   height: 40px;
   padding: 0 0.875rem 0 2.5rem;
   border: 1px solid #d1d5db;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 0.875rem;
   color: #374151;
   background: white;

@@ -174,29 +174,75 @@ watch(() => props.ativaInicial, (novoValor) => {
   .pasta-card {
     width: 120px;
     height: 110px;
+    flex-shrink: 0;
+  }
+  
+  .pasta-background {
+    width: 120px;
+    height: 110px;
+  }
+  
+  .pasta-background-img {
+    width: 120px;
+    height: 110px;
   }
   
   .pasta-titulo {
-    font-size: 13px;
+    font-size: 11px;
   }
   
   .pasta-arquivos {
-    font-size: 11px;
+    font-size: 9px;
+  }
+  
+  .edit-button {
+    top: 18px;
+    left: 10px;
+    width: 35px;
+    height: 35px;
+  }
+  
+  .edit-icon {
+    width: 35px;
+    height: 35px;
   }
 }
 
 @media (max-width: 480px) {
   .pasta-card {
-    width: 110px;
-    height: 100px;
+    width: 100px;
+    height: 95px;
+    flex-shrink: 0;
+  }
+  
+  .pasta-background {
+    width: 100px;
+    height: 95px;
+  }
+  
+  .pasta-background-img {
+    width: 100px;
+    height: 95px;
   }
   
   .pasta-titulo {
-    font-size: 12px;
+    font-size: 10px;
   }
   
   .pasta-arquivos {
-    font-size: 10px;
+    font-size: 8px;
+  }
+  
+  .edit-button {
+    top: 15px;
+    left: 8px;
+    width: 30px;
+    height: 30px;
+  }
+  
+  .edit-icon {
+    width: 30px;
+    height: 30px;
   }
 }
 </style> 

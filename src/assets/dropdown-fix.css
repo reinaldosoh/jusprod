@@ -1,22 +1,191 @@
-/* Regras para corrigir o problema de z-index dos dropdowns */
+/* ==============================================
+   SOLUÇÃO ROBUSTA PARA Z-INDEX DOS DROPDOWNS
+   ============================================== */
 
-/* Dropdown de INÍCIO - z-index MAIS ALTO (30) */
+/* 1. MODAL CONFIGURAR MODELO */
+.modal-overlay {
+  z-index: 20000 !important;
+}
+
+.modal-container {
+  z-index: 20001 !important;
+}
+
+/* 2. DROPDOWNS NO MODAL - USANDO CLASSES ESPECÍFICAS */
+/* Cada dropdown tem z-index SIGNIFICATIVAMENTE maior que o anterior */
+
+/* DROPDOWN CLIENTE - Z-INDEX: 20100 */
+.modal-container .dropdown-cliente .dropdown-container {
+  z-index: 20100 !important;
+  position: relative !important;
+}
+
+.modal-container .dropdown-cliente .dropdown-options {
+  z-index: 20101 !important;
+  position: absolute !important;
+}
+
+/* DROPDOWN PROCESSO - Z-INDEX: 20200 */
+.modal-container .dropdown-processo .dropdown-container {
+  z-index: 20200 !important;
+  position: relative !important;
+}
+
+.modal-container .dropdown-processo .dropdown-options {
+  z-index: 20201 !important;
+  position: absolute !important;
+}
+
+/* DROPDOWN PASTA - Z-INDEX: 20300 */
+.modal-container .dropdown-pasta .dropdown-container {
+  z-index: 20300 !important;
+  position: relative !important;
+}
+
+.modal-container .dropdown-pasta .dropdown-options {
+  z-index: 20301 !important;
+  position: absolute !important;
+}
+
+/* 3. FORÇAR PRIORIDADE COM ESPECIFICIDADE ALTA */
+.modal-container .dropdown-cliente .dropdown-container.dropdown-open {
+  z-index: 25100 !important;
+}
+
+.modal-container .dropdown-cliente .dropdown-container.dropdown-open .dropdown-options {
+  z-index: 25101 !important;
+}
+
+.modal-container .dropdown-processo .dropdown-container.dropdown-open {
+  z-index: 25200 !important;
+}
+
+.modal-container .dropdown-processo .dropdown-container.dropdown-open .dropdown-options {
+  z-index: 25201 !important;
+}
+
+.modal-container .dropdown-pasta .dropdown-container.dropdown-open {
+  z-index: 25300 !important;
+}
+
+.modal-container .dropdown-pasta .dropdown-container.dropdown-open .dropdown-options {
+  z-index: 25301 !important;
+}
+
+/* 4. FALLBACK PARA OUTROS DROPDOWNS NO MODAL */
+.modal-container .dropdown-container {
+  z-index: 20000 !important;
+  position: relative !important;
+}
+
+.modal-container .dropdown-options {
+  z-index: 20001 !important;
+  position: absolute !important;
+}
+
+/* 5. BOTÕES DO MODAL */
+.modal-container .buttons-container button {
+  z-index: 20002 !important;
+  position: relative !important;
+}
+
+/* 6. MODAL CARREGAR ARQUIVO - Z-INDEX ALTOS */
+.carregar-arquivo-modal .dropdown-container {
+  z-index: 21000 !important;
+  position: relative !important;
+}
+
+.carregar-arquivo-modal .dropdown-options {
+  z-index: 21001 !important;
+  position: absolute !important;
+}
+
+/* DROPDOWNS ESPECÍFICOS NO MODAL CARREGAR ARQUIVO */
+/* DROPDOWN CATEGORIA - Z-INDEX: 21500 */
+.carregar-arquivo-modal .dropdown-row:first-child .field-group:nth-child(2) .dropdown-container {
+  z-index: 21500 !important;
+  position: relative !important;
+}
+
+.carregar-arquivo-modal .dropdown-row:first-child .field-group:nth-child(2) .dropdown-options {
+  z-index: 21501 !important;
+  position: absolute !important;
+}
+
+/* DROPDOWN CLIENTE - Z-INDEX: 21300 */
+.carregar-arquivo-modal .dropdown-row:nth-child(2) .field-group:nth-child(1) .dropdown-container {
+  z-index: 21300 !important;
+  position: relative !important;
+}
+
+.carregar-arquivo-modal .dropdown-row:nth-child(2) .field-group:nth-child(1) .dropdown-options {
+  z-index: 21301 !important;
+  position: absolute !important;
+}
+
+/* DROPDOWN PROCESSO - Z-INDEX: 21200 */
+.carregar-arquivo-modal .dropdown-row:nth-child(2) .field-group:nth-child(2) .dropdown-container {
+  z-index: 21200 !important;
+  position: relative !important;
+}
+
+.carregar-arquivo-modal .dropdown-row:nth-child(2) .field-group:nth-child(2) .dropdown-options {
+  z-index: 21201 !important;
+  position: absolute !important;
+}
+
+/* QUANDO DROPDOWNS ESTÃO ABERTOS - Z-INDEX AINDA MAIOR */
+.carregar-arquivo-modal .dropdown-container.dropdown-open {
+  z-index: 25000 !important;
+}
+
+.carregar-arquivo-modal .dropdown-container.dropdown-open .dropdown-options {
+  z-index: 25001 !important;
+}
+
+/* 7. DROPDOWNS FORA DO MODAL - VALORES BAIXOS */
+.dropdown-container {
+  z-index: 1000 !important;
+  position: relative !important;
+}
+
+.dropdown-options {
+  z-index: 1001 !important;
+  position: absolute !important;
+}
+
+/* 7. DROPDOWNS ESPECÍFICOS PARA OUTRAS PÁGINAS */
 .inicio-dropdown .dropdown-container,
 .inicio-dropdown .dropdown-options {
-  position: relative;
-  z-index: 30 !important;
+  z-index: 1030 !important;
 }
 
-/* Dropdown de FIM - z-index MÉDIO (20) */
 .fim-dropdown .dropdown-container,
 .fim-dropdown .dropdown-options {
-  position: relative;
-  z-index: 20 !important;
+  z-index: 1020 !important;
 }
 
-/* Dropdown de CLIENTE/CATEGORIA - z-index MAIS BAIXO (10) */
 .category-field .dropdown-container,
 .category-field .dropdown-options {
-  position: relative;
-  z-index: 10 !important;
+  z-index: 1010 !important;
 }
+
+/* 8. OVERRIDE TOTAL - GARANTIR QUE NADA SOBRESCREVA */
+.modal-container .dropdown-cliente *,
+.modal-container .dropdown-processo *,
+.modal-container .dropdown-pasta * {
+  z-index: inherit !important;
+}
+
+/* 9. DEBUGGING - DESCOMENTE PARA DEBUG */
+/*
+.modal-container .dropdown-cliente .dropdown-container {
+  border: 3px solid green !important;
+}
+.modal-container .dropdown-processo .dropdown-container {
+  border: 3px solid blue !important;
+}
+.modal-container .dropdown-pasta .dropdown-container {
+  border: 3px solid red !important;
+}
+*/

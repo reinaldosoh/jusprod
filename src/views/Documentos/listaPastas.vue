@@ -129,7 +129,31 @@ const handleEditarPasta = (pastaInfo) => {
 
 // Expor função para recarregar (para quando nova pasta for criada)
 defineExpose({
-  recarregar: carregarDados
+  recarregar: carregarDados,
+  selecionarPasta: (pastaId, isPastaSistema = false) => {
+    if (isPastaSistema) {
+      pastaAtivaSelecionada.value = 'modelos-jusprod'
+      // Emitir evento para pasta sistema
+      emit('pasta-selecionada', {
+        tipo: 'sistema',
+        id: 'modelos-jusprod',
+        titulo: 'Modelos padrão',
+        ativa: true
+      })
+    } else {
+      pastaAtivaSelecionada.value = pastaId
+      // Buscar dados da pasta para emitir evento correto
+      const pasta = pastasUsuario.value.find(p => p.id === pastaId)
+      if (pasta) {
+        emit('pasta-selecionada', {
+          tipo: 'usuario',
+          id: pasta.id,
+          titulo: pasta.titulo,
+          ativa: true
+        })
+      }
+    }
+  }
 })
 </script>
 
@@ -138,6 +162,7 @@ defineExpose({
   max-width: 1280px;
   margin: 0 auto;
   padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
 .pastas-scroll-container {
@@ -152,6 +177,11 @@ defineExpose({
   min-width: fit-content;
   padding: 0 2rem;
   align-items: flex-start;
+}
+
+/* Garante que cada pasta não seja cortada */
+.pastas-grid > * {
+  flex-shrink: 0;
 }
 
 /* Cada pasta terá largura fixa de 133px */
@@ -199,41 +229,56 @@ defineExpose({
 /* Responsivo */
 @media (max-width: 768px) {
   .lista-pastas-container {
-    padding: 1rem;
+    padding: 0;
+    width: 100%;
+    overflow-x: auto;
+  }
+  
+  .pastas-scroll-container {
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+  }
+  
+  .pastas-scroll-container::-webkit-scrollbar {
+    display: none; /* WebKit */
   }
   
   .pastas-grid {
-    gap: 20px;
-    flex-direction: column;
-    align-items: flex-start;
+    gap: 2px;
+    padding: 0 1rem;
+    min-width: max-content;
+  }
+  
+  .pastas-grid > * {
+    flex-shrink: 0;
   }
   
   .empty-state-inline {
-    flex-direction: column;
-    text-align: center;
-    min-width: auto;
-    width: 100%;
-    margin-left: 0;
+    margin-left: 20px;
     margin-top: 20px;
+    flex-shrink: 0;
   }
   
-  .empty-image-small {
-    width: 60px;
-    height: 60px;
+  .empty-image {
+    max-width: 300px;
   }
 }
 
 @media (max-width: 480px) {
-  .lista-pastas-container {
-    padding: 1rem 0.5rem;
+  .pastas-grid {
+    gap: 1px;
+    padding: 0 0.5rem;
+    min-width: max-content;
   }
   
-  .empty-title-inline {
-    font-size: 0.9rem;
+  .pastas-grid > * {
+    flex-shrink: 0;
   }
   
-  .empty-description-inline {
-    font-size: 0.8rem;
+  .empty-image {
+    max-width: 250px;
   }
 }
 
