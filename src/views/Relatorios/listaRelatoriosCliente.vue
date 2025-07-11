@@ -243,7 +243,12 @@ const fecharMenuAcoes = () => {
 
 // Função para lidar com ações selecionadas
 const handleAcaoSelecionada = (dadosAcao) => {
+  console.log('🎯 handleAcaoSelecionada chamado com:', dadosAcao)
+  
   const { acao, relatorio } = dadosAcao
+  
+  console.log('🔄 Ação recebida:', acao)
+  console.log('📋 Relatório recebido:', relatorio)
   
   // Emitir evento específico para cada ação
   switch (acao) {
@@ -266,6 +271,7 @@ const handleAcaoSelecionada = (dadosAcao) => {
       emit('historico-relatorio', relatorio)
       break
     case 'excluir':
+      console.log('🗑️ Caso EXCLUIR detectado! Emitindo evento...')
       emit('excluir-relatorio', relatorio)
       break
     default:

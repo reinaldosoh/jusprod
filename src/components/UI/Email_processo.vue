@@ -182,10 +182,7 @@ function handleClickOutside(event) {
           <div class="field-wrapper">
             <div class="input-with-icon">
               <div class="input-icon">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 3H14C14.5523 3 15 3.44772 15 4V12C15 12.5523 14.5523 13 14 13H2C1.44772 13 1 12.5523 1 12V4C1 3.44772 1.44772 3 2 3Z" stroke="#6B7280" stroke-width="1.33"/>
-                  <path d="M15 4L8 9L1 4" stroke="#6B7280" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+                <img src="/images/papel.svg" alt="Título" width="16" height="16" />
               </div>
               <Input
                 v-model="titulo"
@@ -199,15 +196,7 @@ function handleClickOutside(event) {
           <div class="field-wrapper">
             <div class="input-with-icon">
               <div class="input-icon">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <line x1="8" y1="2" x2="8" y2="14" stroke="#6B7280" stroke-width="1"/>
-                  <line x1="3" y1="6" x2="13" y2="6" stroke="#6B7280" stroke-width="1"/>
-                  <path d="M1 8 L5 8 L4 10 L2 10 Z" fill="#6B7280"/>
-                  <line x1="3" y1="6" x2="3" y2="8" stroke="#6B7280" stroke-width="1"/>
-                  <path d="M11 8 L15 8 L14 10 L12 10 Z" fill="#6B7280"/>
-                  <line x1="13" y1="6" x2="13" y2="8" stroke="#6B7280" stroke-width="1"/>
-                  <line x1="6" y1="14" x2="10" y2="14" stroke="#6B7280" stroke-width="1.5"/>
-                </svg>
+                <img src="/images/balanca.svg" alt="Processo" width="16" height="16" />
               </div>
               <Input
                 :model-value="cnj"
@@ -359,7 +348,8 @@ function handleClickOutside(event) {
   font-weight: 600;
   font-family: 'Inter', sans-serif;
   margin: 0;
-
+  text-align: center;
+  flex: 1;
 }
 
 .close-button {

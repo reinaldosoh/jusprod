@@ -94,10 +94,17 @@ const posicaoAjustada = computed(() => {
 })
 
 const executarAcao = (acao) => {
-  emit('acao-selecionada', {
+  console.log('🎬 executarAcao chamado com ação:', acao)
+  console.log('📋 Relatório:', props.relatorio)
+  
+  const dadosAcao = {
     acao,
     relatorio: props.relatorio
-  })
+  }
+  
+  console.log('📤 Emitindo evento acao-selecionada com:', dadosAcao)
+  
+  emit('acao-selecionada', dadosAcao)
   fecharMenu()
 }
 

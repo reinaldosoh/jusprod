@@ -132,12 +132,14 @@ import MenuFixoMobile from './MenuFixoMobile.vue';
 import { useAuthStore } from '../../stores/auth';
 import { useUsuario } from '../../composables/useUsuario';
 import { useIntimacoes } from '../../composables/useIntimacoes';
+import { eventBus, EVENTS } from '../../utils/eventBus';
+import { supabase } from '../../lib/supabase';
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
 const { buscarDadosUsuario, nomeUsuario, iniciaisUsuario, dadosUsuario } = useUsuario();
-const { intimacoesNaoVisualizadas, buscarContadorIntimacoes, configurarListenerIntimacoes } = useIntimacoes();
+const { intimacoesNaoVisualizadas, buscarContadorIntimacoes, configurarListenerIntimacoes, removerListenerIntimacoes } = useIntimacoes();
 
 // Detectar a rota atual para destacar o item de menu correto
 const currentPath = computed(() => route.path);
@@ -206,24 +208,73 @@ const logout = () => {
 // Estados para realtime updates
 let intimacoesSubscription = null;
 
-// Buscar dados do usuário e intimações quando o componente é montado
-onMounted(async () => {
-  if (authStore.user?.value?.id) {
+// Função para inicializar dados do usuário e intimações
+const inicializarDados = async () => {
+  try {
+    console.log('🔄 MenuFixo: Inicializando dados do usuário e intimações...');
+    
+    // Verificar se há usuário autenticado
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (error || !user) {
+      console.log('❌ MenuFixo: Usuário não autenticado ainda, tentando novamente em 1s...');
+      // Tentar novamente em 1 segundo
+      setTimeout(inicializarDados, 1000);
+      return;
+    }
+    
+    console.log('✅ MenuFixo: Usuário autenticado encontrado:', user.id);
+    
+    // Buscar dados do usuário
     await buscarDadosUsuario();
     
     // Buscar contagem inicial de intimações não visualizadas
     await buscarContadorIntimacoes();
     
-    // Configurar listener para atualizações em tempo real
-    intimacoesSubscription = configurarListenerIntimacoes();
+    // Configurar listener para atualizações em tempo real apenas uma vez
+    if (!intimacoesSubscription) {
+      intimacoesSubscription = configurarListenerIntimacoes();
+    }
+    
+    // Configurar listeners para eventos de processo
+    eventBus.on(EVENTS.PROCESSO_MONITORADO, handleProcessoMonitorado);
+    eventBus.on(EVENTS.STATUS_ATUALIZADO, handleStatusAtualizado);
+    
+    console.log('✅ MenuFixo: Dados inicializados com sucesso');
+  } catch (error) {
+    console.error('❌ MenuFixo: Erro ao inicializar dados:', error);
+    // Tentar novamente em 2 segundos em caso de erro
+    setTimeout(inicializarDados, 2000);
   }
+};
+
+// Buscar dados do usuário e intimações quando o componente é montado
+onMounted(async () => {
+  // Inicializar dados imediatamente
+  await inicializarDados();
 });
+
+// Handlers para eventos de processo
+const handleProcessoMonitorado = (data) => {
+  console.log('📢 MenuFixo: Processo monitorado, atualizando contagens...', data);
+  // Recarregar contagem de intimações pois pode ter novas intimações
+  buscarContadorIntimacoes();
+};
+
+const handleStatusAtualizado = (statusData) => {
+  console.log('📢 MenuFixo: Status atualizado, dados:', statusData);
+  // Aqui podemos adicionar lógica adicional se necessário
+};
 
 // Limpar subscription quando componente for desmontado
 onUnmounted(() => {
-  if (intimacoesSubscription) {
-    intimacoesSubscription.unsubscribe();
-  }
+  // Usar o novo método de remoção do composable
+  removerListenerIntimacoes();
+  intimacoesSubscription = null;
+  
+  // Remover listeners de eventos de processo
+  eventBus.off(EVENTS.PROCESSO_MONITORADO, handleProcessoMonitorado);
+  eventBus.off(EVENTS.STATUS_ATUALIZADO, handleStatusAtualizado);
 });
 
 const recentProcesses = ref([

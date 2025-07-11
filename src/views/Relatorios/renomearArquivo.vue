@@ -1,84 +1,67 @@
 <template>
-  <div class="modal-overlay" @click="fecharModal">
-    <div class="modal-container" @click.stop>
-      <!-- Header -->
-      <div class="modal-header">
-        <h2 class="modal-title">Duplicar Relatório</h2>
-        <button class="close-button" @click="fecharModal">×</button>
+  <div class="modal-overlay" @click.self="$emit('close')">
+    <div class="modal-content">
+      <!-- Botão de fechar (X) -->
+      <button class="btn-close" @click="$emit('close')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 6L6 18M6 6L18 18" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <!-- Ícone superior -->
+      <div class="icone-superior">
+        <img src="/images/iconeDoc.svg" alt="Ícone relatório" width="56" height="56">
       </div>
 
-      <!-- Conteúdo -->
-      <div class="modal-content">
-        <div class="form-group">
-          <label for="nomeRelatorio" class="form-label">Nome do novo relatório:</label>
-          <input
-            id="nomeRelatorio"
-            v-model="nomeRelatorio"
-            type="text"
-            class="form-input"
-            :class="{ 'input-error': mostrarErro }"
-            placeholder="Digite o nome do relatório"
-            @keyup.enter="duplicarRelatorio"
-          />
-          <div v-if="mostrarErro" class="error-message">
-            {{ mensagemErro }}
-          </div>
-        </div>
+      <!-- Título -->
+      <h2 class="titulo">Duplicar relatório</h2>
 
-        <div class="form-group">
-          <label for="pastaDestino" class="form-label">Pasta de destino:</label>
-          <select
-            id="pastaDestino"
-            v-model="pastaDestinoId"
-            class="form-select"
-            :class="{ 'input-error': mostrarErro }"
-          >
-            <option value="">Selecione uma pasta</option>
-            <option 
-              v-for="pasta in pastasUsuario" 
-              :key="pasta.id" 
-              :value="pasta.id"
-            >
-              {{ pasta.titulo }}
-            </option>
-          </select>
-        </div>
+      <!-- Subtítulo -->
+      <p class="subtitulo">Dê um nome para a cópia do relatório</p>
 
-        <div class="info-box">
-          <div class="info-icon">ℹ️</div>
-          <div class="info-text">
-            <p><strong>Relatório original:</strong> {{ relatorio?.nome }}</p>
-            <p><strong>Pasta atual:</strong> {{ relatorio?.pasta_titulo || 'Sem pasta' }}</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Footer -->
-      <div class="modal-footer">
-        <button 
-          type="button" 
-          class="secondary-btn" 
-          @click="fecharModal"
-          :disabled="loading"
+      <!-- Input com ícone -->
+      <div class="input-container">
+        <img src="/images/iconPasta.svg" alt="Pasta" width="18" height="18" class="input-icon">
+        <input 
+          v-model="nomeRelatorio" 
+          type="text" 
+          placeholder="Nome do relatório"
+          class="input-nome"
+          @keyup.enter="duplicarRelatorio"
+          maxlength="100"
         >
-          Cancelar
-        </button>
-        <button 
-          type="button" 
-          class="primary-btn" 
+      </div>
+
+      <!-- Mensagem de erro -->
+      <div v-if="mostrarErro" class="erro-mensagem">
+        Esse nome está em uso. Dê outro nome ao relatório.
+      </div>
+
+      <!-- Botões -->
+      <div class="botoes-container">
+        <Button 
+          label="Cancelar" 
+          type="outline" 
+          button-type="button"
+          @click="$emit('close')"
+        />
+        <Button 
+          label="Duplicar" 
+          type="primary" 
+          button-type="button"
+          :disabled="loading || !nomeRelatorio.trim()"
           @click="duplicarRelatorio"
-          :disabled="loading || !nomeRelatorio.trim() || !pastaDestinoId"
-        >
-          <span v-if="loading" class="loading-spinner"></span>
-          {{ loading ? 'Duplicando...' : 'Duplicar Relatório' }}
-        </button>
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
+import { supabase } from '../../lib/supabase'
+import { useAuthStore } from '../../stores/auth'
+import Button from '../../components/UI/Button.vue'
 
 const props = defineProps({
   relatorio: {
@@ -89,162 +72,102 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'relatorio-duplicado'])
 
-// Estados
+const { user } = useAuthStore()
 const nomeRelatorio = ref('')
-const pastaDestinoId = ref('')
-const pastasUsuario = ref([])
 const loading = ref(false)
 const mostrarErro = ref(false)
-const mensagemErro = ref('')
 
-// Carregar pastas do usuário
-const carregarPastasUsuario = async () => {
+// Inicializar nome com base no relatório original
+onMounted(() => {
+  if (props.relatorio?.nome) {
+    // Adicionar "Cópia de" no início do nome
+    nomeRelatorio.value = `Cópia de ${props.relatorio.nome}`
+  }
+})
+
+// Função para verificar se nome já existe na pasta
+async function verificarNomeExistente(nome) {
   try {
-    const { supabase } = await import('../../lib/supabase.js')
-    const { useAuthStore } = await import('../../stores/auth.js')
-    
-    const authStore = useAuthStore()
-    const usuario = authStore.user.value
-    
-    if (!usuario) {
-      throw new Error('Usuário não autenticado')
+    if (!user.value?.id || !props.relatorio?.pasta_id) {
+      console.error('Usuário não autenticado ou pasta não identificada')
+      return false
     }
 
-    const { data: pastas, error } = await supabase
-      .from('pasta_relatorios')
-      .select('id, titulo')
-      .eq('uuid', usuario.id)
-      .order('titulo', { ascending: true })
+    const { data, error } = await supabase
+      .from('relatorios')
+      .select('id')
+      .eq('pasta_id', props.relatorio.pasta_id)
+      .eq('nome', nome.trim())
+      .limit(1)
 
     if (error) {
-      throw error
+      console.error('Erro ao verificar nome:', error)
+      return false
     }
 
-    pastasUsuario.value = pastas || []
-    
-    // Selecionar a pasta atual como padrão
-    if (props.relatorio?.pasta_id) {
-      pastaDestinoId.value = props.relatorio.pasta_id
-    }
-
+    return data && data.length > 0
   } catch (error) {
-    console.error('Erro ao carregar pastas:', error)
-    mostrarErro.value = true
-    mensagemErro.value = 'Erro ao carregar pastas disponíveis'
+    console.error('Erro ao verificar nome:', error)
+    return false
   }
 }
 
-// Duplicar relatório
-const duplicarRelatorio = async () => {
-  if (!nomeRelatorio.value.trim()) {
-    mostrarErro.value = true
-    mensagemErro.value = 'Nome do relatório é obrigatório'
-    return
-  }
-
-  if (!pastaDestinoId.value) {
-    mostrarErro.value = true
-    mensagemErro.value = 'Selecione uma pasta de destino'
-    return
-  }
-
+// Função para duplicar o relatório
+async function duplicarRelatorio() {
+  if (!nomeRelatorio.value.trim()) return
+  
+  loading.value = true
+  mostrarErro.value = false
+  
   try {
-    loading.value = true
-    mostrarErro.value = false
-
-    const { supabase } = await import('../../lib/supabase.js')
-    const { useAuthStore } = await import('../../stores/auth.js')
+    // Verificar se nome já existe
+    const nomeExiste = await verificarNomeExistente(nomeRelatorio.value)
     
-    const authStore = useAuthStore()
-    const usuario = authStore.user.value
-    
-    if (!usuario) {
-      throw new Error('Usuário não autenticado')
-    }
-
-    // Verificar se nome já existe na pasta de destino
-    const { data: existeRelatorio, error: errorVerificar } = await supabase
-      .from('relatorios')
-      .select('id')
-      .eq('nome', nomeRelatorio.value.trim())
-      .eq('pasta_id', pastaDestinoId.value)
-      .eq('uuid', usuario.id)
-
-    if (errorVerificar) {
-      throw errorVerificar
-    }
-
-    if (existeRelatorio && existeRelatorio.length > 0) {
+    if (nomeExiste) {
       mostrarErro.value = true
-      mensagemErro.value = 'Já existe um relatório com este nome na pasta selecionada'
+      loading.value = false
       return
     }
-
-    // Duplicar relatório
-    const novoRelatorio = {
-      nome: nomeRelatorio.value.trim(),
-      pasta_id: pastaDestinoId.value,
-      uuid: usuario.id,
-      html: props.relatorio.html || '',
-      url: props.relatorio.url || null,
-      tamanho: props.relatorio.tamanho || 0,
-      tipo: props.relatorio.tipo || 'REPORT',
-      isFile: props.relatorio.isFile || false,
-      categoria: props.relatorio.categoria || 'Relatório Geral',
-      cliente_id: props.relatorio.cliente_id || null,
-      processocnj: props.relatorio.processocnj || null,
-      created_at: new Date().toISOString()
+    
+    // Verificar se usuário está autenticado
+    if (!user.value?.id) {
+      alert('Usuário não autenticado. Faça login novamente.')
+      return
     }
-
-    const { data: relatorioCriado, error: errorCriar } = await supabase
+    
+    // Criar relatório duplicado
+    const { data, error } = await supabase
       .from('relatorios')
-      .insert([novoRelatorio])
+      .insert({
+        nome: nomeRelatorio.value.trim(),
+        html: props.relatorio.html || '',
+        url: props.relatorio.url || '',
+        isFile: props.relatorio.isFile || false,
+        pasta_id: props.relatorio.pasta_id,
+        cliente_id: props.relatorio.cliente_id,
+        processo_id: props.relatorio.processo_id,
+        processocnj: props.relatorio.processocnj,
+        uuid: user.value.id
+      })
       .select()
-
-    if (errorCriar) {
-      throw errorCriar
+    
+    if (error) {
+      console.error('Erro ao duplicar relatório:', error)
+      alert('Erro ao duplicar o relatório. Tente novamente.')
+      return
     }
-
-    console.log('✅ Relatório duplicado com sucesso:', relatorioCriado)
-
-    // Emitir evento de sucesso
-    emit('relatorio-duplicado', relatorioCriado[0])
-
+    
+    // Sucesso - emitir evento e fechar modal
+    emit('relatorio-duplicado', data[0])
+    emit('close')
+    
   } catch (error) {
     console.error('Erro ao duplicar relatório:', error)
-    mostrarErro.value = true
-    mensagemErro.value = 'Erro ao duplicar relatório. Tente novamente.'
+    alert('Erro ao duplicar o relatório. Tente novamente.')
   } finally {
     loading.value = false
   }
 }
-
-// Fechar modal
-const fecharModal = () => {
-  emit('close')
-}
-
-// Gerar nome sugerido
-const gerarNomeSugerido = () => {
-  if (props.relatorio?.nome) {
-    const nomeOriginal = props.relatorio.nome
-    const dataAtual = new Date().toLocaleDateString('pt-BR')
-    nomeRelatorio.value = `${nomeOriginal} - Cópia (${dataAtual})`
-  }
-}
-
-// Limpar erros quando nome mudar
-watch(nomeRelatorio, () => {
-  if (mostrarErro.value) {
-    mostrarErro.value = false
-  }
-})
-
-// Carregar dados quando component montar
-onMounted(() => {
-  carregarPastasUsuario()
-  gerarNomeSugerido()
-})
 </script>
 
 <style scoped>
@@ -259,244 +182,118 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-}
-
-.modal-container {
-  background: white;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-.modal-header {
-  background: #0468FA;
-  color: white;
-  padding: 1rem 1.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-radius: 12px 12px 0 0;
-}
-
-.modal-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  font-size: 1.5rem;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-  line-height: 1;
-}
-
-.close-button:hover {
-  background: rgba(255, 255, 255, 0.1);
+  padding: 20px;
 }
 
 .modal-content {
-  padding: 1.5rem;
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-  margin-bottom: 0.5rem;
-}
-
-.form-input,
-.form-select {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  max-width: 400px;
+  position: relative;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.btn-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.btn-close:hover {
+  background-color: #f3f4f6;
+}
+
+.icone-superior {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 20px;
+  margin-top: 8px;
+}
+
+.titulo {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  text-align: left;
+  margin: 0 0 8px 0;
+}
+
+.subtitulo {
+  font-size: 14px;
+  font-weight: 400;
+  color: #6b7280;
+  text-align: left;
+  margin: 0 0 20px 0;
+}
+
+.input-container {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.input-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.input-nome {
+  width: 100%;
+  height: 44px;
+  border: 1px solid #D1D5DB;
   border-radius: 8px;
-  font-size: 0.875rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  padding: 0 16px 0 48px;
+  font-size: 16px;
+  color: #111827;
+  background: white;
+  transition: border-color 0.2s, box-shadow 0.2s;
   box-sizing: border-box;
 }
 
-.form-input:focus,
-.form-select:focus {
+.input-nome:focus {
   outline: none;
-  border-color: #0468FA;
-  box-shadow: 0 0 0 3px rgba(4, 104, 250, 0.1);
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-.form-select {
-  cursor: pointer;
-  background: white;
+.input-nome::placeholder {
+  color: #9CA3AF;
 }
 
-.input-error {
-  border-color: #ef4444;
+.erro-mensagem {
+  color: #DC2626;
+  font-size: 14px;
+  margin-bottom: 16px;
+  text-align: left;
 }
 
-.error-message {
-  color: #ef4444;
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-}
-
-.info-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 1rem;
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-
-.info-icon {
-  font-size: 1.25rem;
-  flex-shrink: 0;
-}
-
-.info-text {
-  flex: 1;
-}
-
-.info-text p {
-  margin: 0;
-  font-size: 0.875rem;
-  color: #4b5563;
-}
-
-.info-text p:not(:last-child) {
-  margin-bottom: 0.5rem;
-}
-
-.modal-footer {
-  background: #f8fafc;
-  padding: 1rem 1.5rem;
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  border-top: 1px solid #e2e8f0;
-  border-radius: 0 0 12px 12px;
-}
-
-.secondary-btn,
-.primary-btn {
-  border-radius: 8px;
-  padding: 0.75rem 1.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.secondary-btn {
-  background: white;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-
-.secondary-btn:hover:not(:disabled) {
-  background: #f9fafb;
-  border-color: #9ca3af;
-}
-
-.primary-btn {
-  background: #0468FA;
-  color: white;
-}
-
-.primary-btn:hover:not(:disabled) {
-  background: #0356D6;
-}
-
-.primary-btn:disabled,
-.secondary-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.loading-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid transparent;
-  border-top: 2px solid currentColor;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Responsivo */
-@media (max-width: 768px) {
-  .modal-container {
-    margin: 0.5rem;
-    max-width: calc(100% - 1rem);
-  }
-  
-  .modal-header {
-    padding: 0.75rem 1rem;
-  }
-  
-  .modal-title {
-    font-size: 1rem;
-  }
-  
-  .modal-content {
-    padding: 1rem;
-  }
-  
-  .modal-footer {
-    padding: 0.75rem 1rem;
-    flex-direction: column;
-  }
-  
-  .secondary-btn,
-  .primary-btn {
-    width: 100%;
-    justify-content: center;
-  }
+.botoes-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 24px;
 }
 
 @media (max-width: 480px) {
-  .modal-overlay {
-    padding: 0;
+  .modal-content {
+    padding: 24px;
+    margin: 16px;
   }
   
-  .modal-container {
-    border-radius: 0;
-    height: 100vh;
-    max-height: 100vh;
-    margin: 0;
-    max-width: 100%;
-  }
-  
-  .modal-header {
-    border-radius: 0;
-  }
-  
-  .modal-footer {
-    border-radius: 0;
+  .botoes-container {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 }
 </style> 

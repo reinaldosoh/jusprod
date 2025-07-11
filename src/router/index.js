@@ -120,6 +120,24 @@ const routes = [
     meta: { requiresAuth: true, requiresOnboarding: true }
   },
   {
+    path: '/recebimentos',
+    name: 'recebimentos',
+    component: () => import('../views/Recebimentos/Recebimentos.vue'),
+    meta: { requiresAuth: true, requiresOnboarding: true }
+  },
+  {
+    path: '/saidas',
+    name: 'saidas',
+    component: () => import('../views/Saidas/Saidas.vue'),
+    meta: { requiresAuth: true, requiresOnboarding: true }
+  },
+  {
+    path: '/outras-despesas',
+    name: 'outrasDespesas',
+    component: () => import('../views/OutrasDespesas/OutrasDespesas.vue'),
+    meta: { requiresAuth: true, requiresOnboarding: true }
+  },
+  {
     path: '/ajuda',
     name: 'ajuda',
     component: () => import('../views/Ajuda/Ajuda.vue'),

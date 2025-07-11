@@ -754,9 +754,13 @@ watch(() => props.show, async (newShow, oldShow) => {
               <div class="field-wrapper title-field">
                 <div class="input-with-icon">
                   <div class="input-icon">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M2 3H14C14.5523 3 15 3.44772 15 4V12C15 12.5523 14.5523 13 14 13H2C1.44772 13 1 12.5523 1 12V4C1 3.44772 1.44772 3 2 3Z" stroke="#6B7280" stroke-width="1.33"/>
-                      <path d="M15 4L8 9L1 4" stroke="#6B7280" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+                    <!-- Ícone papel.svg para título -->
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M14 2V8H20" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M16 13H8" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M16 17H8" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M10 9H9H8" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                   </div>
                   <Input
@@ -775,6 +779,7 @@ watch(() => props.show, async (newShow, oldShow) => {
                     @option-selected="onCategoriaSelected"
                     placeholder-text="Selecione uma categoria"
                     :show-placeholder-icon="true"
+                    icon-type="categorias"
                   />
                 </div>
               </div>
@@ -787,9 +792,13 @@ watch(() => props.show, async (newShow, oldShow) => {
             <div class="field-wrapper">
               <div class="input-with-icon">
                 <div class="input-icon">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <rect x="2" y="3" width="12" height="10" rx="1" stroke="#6B7280" stroke-width="1.33"/>
-                    <path d="M6 1V4M10 1V4M2 7H14" stroke="#6B7280" stroke-width="1.33" stroke-linecap="round"/>
+                  <!-- Ícone calendarioMarcado.svg para marcar na agenda -->
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke="#6B7280" stroke-width="2" fill="none"/>
+                    <line x1="16" y1="2" x2="16" y2="6" stroke="#6B7280" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="8" y1="2" x2="8" y2="6" stroke="#6B7280" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="3" y1="10" x2="21" y2="10" stroke="#6B7280" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="12" cy="16" r="2" fill="#6B7280"/>
                   </svg>
                 </div>
                 <Input
@@ -810,7 +819,7 @@ watch(() => props.show, async (newShow, oldShow) => {
                   @option-selected="onHoraInicioSelected"
                   :show-placeholder-icon="true"
                   placeholder-text="Selecionar o início"
-                  icon-type="clock"
+                  icon-type="relogio"
                 />
               </div>
 
@@ -821,7 +830,7 @@ watch(() => props.show, async (newShow, oldShow) => {
                   @option-selected="onHoraFimSelected"
                   :show-placeholder-icon="true"
                   placeholder-text="Selecionar o fim"
-                  icon-type="clock"
+                  icon-type="relogio"
                 />
               </div>
             </div>
@@ -830,40 +839,20 @@ watch(() => props.show, async (newShow, oldShow) => {
             <div class="fields-row">
               <!-- Campo Cliente -->
               <div class="field-wrapper">
-                <div class="dropdown-with-icon">
-                  <div class="input-icon">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <circle cx="8" cy="5" r="3" stroke="#6B7280" stroke-width="1.33"/>
-                      <path d="M2 13C2 10.79 4.686 9 8 9S14 10.79 14 13" stroke="#6B7280" stroke-width="1.33"/>
-                    </svg>
-                  </div>
-                  <div class="dropdown-with-padding">
-                    <Dropdown 
-                      :options="clientesOptions"
-                      @option-selected="onClienteSelected"
-                    />
-                  </div>
-                </div>
+                <Dropdown 
+                  :options="clientesOptions"
+                  @option-selected="onClienteSelected"
+                  :show-placeholder-icon="true"
+                  placeholder-text="Selecione cliente"
+                  icon-type="user"
+                />
               </div>
 
               <!-- Campo CNJ fixo -->
               <div class="field-wrapper">
                 <div class="input-with-icon">
                   <div class="input-icon">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <!-- Poste central -->
-                      <line x1="8" y1="2" x2="8" y2="14" stroke="#6B7280" stroke-width="1"/>
-                      <!-- Braço da balança -->
-                      <line x1="3" y1="6" x2="13" y2="6" stroke="#6B7280" stroke-width="1"/>
-                      <!-- Prato esquerdo -->
-                      <path d="M1 8 L5 8 L4 10 L2 10 Z" fill="#6B7280"/>
-                      <line x1="3" y1="6" x2="3" y2="8" stroke="#6B7280" stroke-width="1"/>
-                      <!-- Prato direito -->
-                      <path d="M11 8 L15 8 L14 10 L12 10 Z" fill="#6B7280"/>
-                      <line x1="13" y1="6" x2="13" y2="8" stroke="#6B7280" stroke-width="1"/>
-                      <!-- Base -->
-                      <line x1="6" y1="14" x2="10" y2="14" stroke="#6B7280" stroke-width="1.5"/>
-                    </svg>
+                    <img src="/images/balanca.svg" alt="Processo" width="18" height="18" />
                   </div>
                   <Input
                     :model-value="cnj"
@@ -880,8 +869,10 @@ watch(() => props.show, async (newShow, oldShow) => {
               <label class="emails-label">📧 E-mails que receberão notificação:</label>
               <div class="emails-list">
                 <div v-for="(email, index) in emailsCompletos" :key="index" class="email-item">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" class="email-icon">
-                    <path d="M2 4L8 8L14 4M2 4V12C2 12.5523 2.44772 13 3 13H13C13.5523 13 14 12.5523 14 12V4M2 4C2 3.44772 2.44772 3 3 3H13C13.5523 3 14 3.44772 14 4" stroke="#6B7280" stroke-width="1.33" stroke-linecap="round" stroke-linejoin="round"/>
+                  <!-- Ícone envelope.svg para emails -->
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M22 6L12 13L2 6" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                   <span class="email-text">{{ email }}</span>
                   <span 
@@ -901,8 +892,10 @@ watch(() => props.show, async (newShow, oldShow) => {
             <div class="field-wrapper">
               <div class="input-with-icon">
                 <div class="input-icon">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M6.5 9.5L9.5 6.5M9 3H10C12.2091 3 14 4.79086 14 7V9C14 11.2091 12.2091 13 10 13H9M7 13H6C3.79086 13 2 11.2091 2 9V7C2 4.79086 3.79086 3 6 3H7" stroke="#6B7280" stroke-width="1.33" stroke-linecap="round"/>
+                  <!-- Ícone link.svg para link da reunião -->
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 13C10.4295 13.5741 10.9774 14.0491 11.6066 14.3929C12.2357 14.7367 12.9315 14.9411 13.6467 14.9923C14.3618 15.0435 15.0796 14.9403 15.7513 14.6897C16.4231 14.4392 17.0331 14.047 17.54 13.54L20.54 10.54C21.4508 9.59695 21.9548 8.33394 21.9434 7.02296C21.932 5.71198 21.4061 4.45791 20.4791 3.53087C19.5521 2.60383 18.298 2.07799 16.987 2.0666C15.676 2.0552 14.413 2.55918 13.47 3.47L11.75 5.18" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M14 11C13.5705 10.4259 13.0226 9.95095 12.3934 9.60712C11.7643 9.26329 11.0685 9.05892 10.3533 9.00770C9.63819 8.95649 8.92037 9.05973 8.24860 9.31026C7.57682 9.56079 6.96687 9.95295 6.46 10.46L3.46 13.46C2.54918 14.403 2.04520 15.6661 2.0566 16.9770C2.06799 18.288 2.59383 19.5421 3.52087 20.4691C4.44791 21.3962 5.70198 21.922 7.01296 21.9334C8.32394 21.9448 9.58695 21.4408 10.53 20.53L12.24 18.82" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </div>
                 <Input
@@ -917,9 +910,10 @@ watch(() => props.show, async (newShow, oldShow) => {
             <div class="field-wrapper">
               <div class="input-with-icon">
                 <div class="input-icon">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M8 8C9.10457 8 10 7.10457 10 6C10 4.89543 9.10457 4 8 4C6.89543 4 6 4.89543 6 6C6 7.10457 6.89543 8 8 8Z" stroke="#6B7280" stroke-width="1.33"/>
-                    <path d="M8 1C5.79086 1 4 2.79086 4 5C4 8.5 8 15 8 15C8 15 12 8.5 12 5C12 2.79086 10.2091 1 8 1Z" stroke="#6B7280" stroke-width="1.33"/>
+                  <!-- Ícone localizacao.svg para endereço -->
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 10C21 17 12 23 12 23C12 23 3 17 3 10C3 7.61305 3.94821 5.32387 5.63604 3.63604C7.32387 1.94821 9.61305 1 12 1C14.3869 1 16.6761 1.94821 18.364 3.63604C20.0518 5.32387 21 7.61305 21 10Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="10" r="3" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </div>
                 <Input

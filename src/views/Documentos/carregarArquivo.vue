@@ -190,19 +190,42 @@ const carregarClientes = async () => {
 }
 
 const carregarProcessos = async (clienteId) => {
+  if (!clienteId) {
+    opcoesProcesso.value = []
+    return
+  }
+  
   try {
-    const { data, error } = await supabase
-      .from('processos')
-      .select('id, numerocnj, titulo')
+    // Buscar processos pela tabela processo_cliente (seguindo padrão do formsRecebiveis.vue)
+    const { data: processosCliente, error } = await supabase
+      .from('processo_cliente')
+      .select(`
+        processo_id,
+        processos!inner(id, cnpj, autor, reu, nome)
+      `)
       .eq('cliente_id', clienteId)
-      .order('numerocnj')
-
+    
     if (error) throw error
-
-    opcoesProcesso.value = data.map(processo => ({
-      id: processo.id,
-      label: processo.numerocnj || processo.titulo || `Processo ${processo.id}`
-    }))
+    
+    if (!processosCliente || processosCliente.length === 0) {
+      opcoesProcesso.value = []
+      return
+    }
+    
+    // Mapear os processos para o formato esperado
+    const opcoes = []
+    processosCliente.forEach(pc => {
+      const processo = pc.processos
+      // Priorizar nome, se não tiver usar cnpj
+      const displayName = (processo.nome && processo.nome.trim() !== '') ? processo.nome : (processo.cnpj || `Processo ${processo.id}`)
+      opcoes.push({
+        id: processo.id,
+        label: displayName
+      })
+    })
+    
+    opcoesProcesso.value = opcoes
+    
   } catch (error) {
     console.error('Erro ao carregar processos:', error)
     opcoesProcesso.value = []
@@ -216,7 +239,7 @@ const handleCategoriaSelected = (opcao) => {
 
 const handleClienteSelected = (opcao) => {
   clienteSelecionado.value = opcao
-  processoSelecionado.value = null
+  processoSelecionado.value = null // Reset processo quando cliente muda
   if (opcao && opcao.id) {
     carregarProcessos(opcao.id)
   } else {

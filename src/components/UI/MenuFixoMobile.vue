@@ -203,6 +203,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
 import { useUsuario } from '../../composables/useUsuario'
 import { useIntimacoes } from '../../composables/useIntimacoes'
+import { supabase } from '../../lib/supabase'
 import Controlador from './Controlador.vue'
 
 // Props
@@ -221,7 +222,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const { buscarDadosUsuario, nomeUsuario, iniciaisUsuario, dadosUsuario } = useUsuario()
-const { intimacoesNaoVisualizadas, buscarContadorIntimacoes, configurarListenerIntimacoes } = useIntimacoes()
+const { intimacoesNaoVisualizadas, buscarContadorIntimacoes, configurarListenerIntimacoes, removerListenerIntimacoes } = useIntimacoes()
 
 // Computed
 const currentPath = computed(() => route.path)
@@ -239,24 +240,53 @@ const userInitials = computed(() => iniciaisUsuario.value)
 // Estados para realtime updates
 let intimacoesSubscription = null
 
-// Busca os dados do usuário e intimações quando o componente é montado
-onMounted(async () => {
-  if (authStore.user?.value?.id) {
+// Função para inicializar dados do usuário e intimações
+const inicializarDados = async () => {
+  try {
+    console.log('🔄 MenuFixoMobile: Inicializando dados do usuário e intimações...')
+    
+    // Verificar se há usuário autenticado
+    const { data: { user }, error } = await supabase.auth.getUser()
+    
+    if (error || !user) {
+      console.log('❌ MenuFixoMobile: Usuário não autenticado ainda, tentando novamente em 1s...')
+      // Tentar novamente em 1 segundo
+      setTimeout(inicializarDados, 1000)
+      return
+    }
+    
+    console.log('✅ MenuFixoMobile: Usuário autenticado encontrado:', user.id)
+    
+    // Buscar dados do usuário
     await buscarDadosUsuario()
     
     // Buscar contagem inicial de intimações não visualizadas
     await buscarContadorIntimacoes()
     
-    // Configurar listener para atualizações em tempo real
-    intimacoesSubscription = configurarListenerIntimacoes()
+    // Configurar listener para atualizações em tempo real apenas uma vez
+    if (!intimacoesSubscription) {
+      intimacoesSubscription = configurarListenerIntimacoes()
+    }
+    
+    console.log('✅ MenuFixoMobile: Dados inicializados com sucesso')
+  } catch (error) {
+    console.error('❌ MenuFixoMobile: Erro ao inicializar dados:', error)
+    // Tentar novamente em 2 segundos em caso de erro
+    setTimeout(inicializarDados, 2000)
   }
+}
+
+// Busca os dados do usuário e intimações quando o componente é montado
+onMounted(async () => {
+  // Inicializar dados imediatamente
+  await inicializarDados()
 })
 
 // Limpar subscription quando componente for desmontado
 onUnmounted(() => {
-  if (intimacoesSubscription) {
-    intimacoesSubscription.unsubscribe()
-  }
+  // Usar o novo método de remoção do composable
+  removerListenerIntimacoes()
+  intimacoesSubscription = null
 })
 
 // Methods
@@ -758,4 +788,4 @@ const handleDeleteAccount = () => {
 .bg-gray-50 > div > div > div[style*="width: 10rem"] {
   width: 8rem !important;
 }
-</style> 
+</style>

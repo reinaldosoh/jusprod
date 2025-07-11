@@ -97,9 +97,7 @@
       </div>
       
       <div v-if="tabAtiva === 'documentos'" class="tab-panel">
-        <div class="empty-state">
-          Documentos em breve.
-        </div>
+        <ListaDocumentosCliente :clienteId="clienteId" :processoId="processoSelecionado?.id" />
       </div>
       
       <div v-if="tabAtiva === 'lembretes'" class="tab-panel">
@@ -129,6 +127,7 @@ import { useRoute } from 'vue-router'
 import { supabase } from '../../../lib/supabase'
 import { Scale } from 'lucide-vue-next'
 import ListaIntimacoes from '../../Intimacoes/listaintimacoes.vue'
+import ListaDocumentosCliente from '../../Documentos/listaDocumentosCliente.vue'
 
 const props = defineProps({
   cliente: Object

@@ -79,6 +79,14 @@ const props = defineProps({
   termoBusca: {
     type: String,
     default: ''
+  },
+  clienteId: {
+    type: [String, Number],
+    default: null
+  },
+  processoId: {
+    type: [String, Number],
+    default: null
   }
 })
 
@@ -108,7 +116,7 @@ const carregarDocumentosPasta = async () => {
     // Buscar documentos da pasta
     const { data, error } = await supabase
       .from('documentos')
-      .select('id, nome, html, pasta_id, created_at, url, "isFile", cliente_id')
+      .select('id, nome, html, pasta_id, created_at, url, "isFile", cliente_id, processo_id')
       .eq('pasta_id', props.pastaId)
       .order('created_at', { ascending: false })
     
@@ -121,6 +129,50 @@ const carregarDocumentosPasta = async () => {
     
   } catch (error) {
     console.error('Erro ao carregar documentos da pasta:', error)
+    documentos.value = []
+    documentosOriginal.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+// Função para carregar documentos por cliente e processo
+const carregarDocumentosClienteProcesso = async () => {
+  if (!props.clienteId) {
+    documentos.value = []
+    documentosOriginal.value = []
+    return
+  }
+
+  try {
+    loading.value = true
+    
+    // Importar supabase
+    const { supabase } = await import('../../lib/supabase.js')
+    
+    // Construir query base
+    let query = supabase
+      .from('documentos')
+      .select('id, nome, html, pasta_id, created_at, url, "isFile", cliente_id, processo_id')
+      .eq('cliente_id', props.clienteId)
+    
+    // Adicionar filtro por processo se fornecido
+    if (props.processoId) {
+      query = query.eq('processo_id', props.processoId)
+    }
+    
+    // Executar query
+    const { data, error } = await query.order('created_at', { ascending: false })
+    
+    if (error) {
+      throw error
+    }
+    
+    documentosOriginal.value = data || []
+    aplicarFiltro()
+    
+  } catch (error) {
+    console.error('Erro ao carregar documentos do cliente/processo:', error)
     documentos.value = []
     documentosOriginal.value = []
   } finally {
@@ -267,8 +319,24 @@ const handleAcaoSelecionada = (dadosAcao) => {
 
 // Watcher para recarregar quando pasta mudar
 watch(() => props.pastaId, () => {
-  carregarDocumentosPasta()
+  if (props.pastaId) {
+    carregarDocumentosPasta()
+  }
 }, { immediate: true })
+
+// Watcher para recarregar quando cliente mudar
+watch(() => props.clienteId, () => {
+  if (props.clienteId && !props.pastaId) {
+    carregarDocumentosClienteProcesso()
+  }
+}, { immediate: true })
+
+// Watcher para recarregar quando processo mudar
+watch(() => props.processoId, () => {
+  if (props.clienteId && !props.pastaId) {
+    carregarDocumentosClienteProcesso()
+  }
+})
 
 // Watcher para aplicar filtro quando termo de busca mudar
 watch(() => props.termoBusca, () => {
@@ -277,7 +345,13 @@ watch(() => props.termoBusca, () => {
 
 // Expor função para recarregar
 defineExpose({
-  recarregar: carregarDocumentosPasta
+  recarregar: () => {
+    if (props.pastaId) {
+      carregarDocumentosPasta()
+    } else if (props.clienteId) {
+      carregarDocumentosClienteProcesso()
+    }
+  }
 })
 </script>
 

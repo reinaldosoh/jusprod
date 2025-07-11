@@ -6,13 +6,15 @@
   >
     <!-- Ícone da Intimação -->
     <div class="intimacao-icon">
-      <svg viewBox="0 0 24 24" fill="none" :stroke="!intimacao.visualizado ? '#EF4444' : 'currentColor'" class="mail-icon">
-        <!-- Envelope -->
-        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-        <polyline points="22,6 12,13 2,6"/>
-        <!-- Indicador de novo (se não visualizada) -->
-        <circle v-if="!intimacao.visualizado" cx="20" cy="4" r="3" fill="#EF4444"/>
-      </svg>
+      <img 
+        :src="!intimacao.visualizado ? '/images/balancaativacard.svg' : '/images/balancainativacard.svg'"
+        alt="Intimação" 
+        class="mail-icon"
+        width="38"
+        height="38"
+      />
+      <!-- Indicador de novo (se não visualizada) -->
+      <div v-if="!intimacao.visualizado" class="notification-dot"></div>
     </div>
 
     <!-- Informações da Intimação -->
@@ -156,8 +158,8 @@ const formatarData = (data) => {
 }
 
 .mail-icon {
-  width: 24px;
-  height: 24px;
+  width: 38px;
+  height: 38px;
   stroke-width: 1.5;
 }
 

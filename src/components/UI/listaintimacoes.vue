@@ -42,13 +42,14 @@
       >
         <!-- Ícone da Intimação -->
         <div class="intimacao-icon">
-          <svg viewBox="0 0 24 24" fill="none" :stroke="activeTab === 'nao-visualizadas' ? '#EF4444' : 'currentColor'" class="mail-icon">
-            <!-- Envelope -->
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-            <polyline points="22,6 12,13 2,6"/>
-            <!-- Indicador de novo (se não visualizada) -->
-            <circle v-if="!intimacao.visualizado" cx="20" cy="4" r="3" fill="#EF4444"/>
-          </svg>
+          <img 
+            src="/images/envelope.svg" 
+            alt="Intimação" 
+            class="mail-icon"
+            :style="{ filter: activeTab === 'nao-visualizadas' ? 'hue-rotate(330deg) saturate(2) brightness(0.8)' : 'none' }"
+          />
+          <!-- Indicador de novo (se não visualizada) -->
+          <div v-if="!intimacao.visualizado" class="notification-dot"></div>
         </div>
 
         <!-- Informações da Intimação -->

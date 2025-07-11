@@ -103,6 +103,7 @@
     <!-- Modal Confirmar Exclusão -->
     <ConfirmarExclusaoRelatorio
       v-if="mostrarModalExclusao && relatorioParaExcluir"
+      :visible="mostrarModalExclusao"
       :relatorio="relatorioParaExcluir"
       @cancelar="fecharModalExclusao"
       @excluir="handleRelatorioExcluido"
@@ -500,9 +501,16 @@ const handleHistoricoRelatorio = (relatorio) => {
 }
 
 const handleExcluirRelatorio = (relatorio) => {
-  console.log('Excluir relatório:', relatorio)
+  console.log('🗑️ handleExcluirRelatorio chamado!')
+  console.log('📋 Relatório a excluir:', relatorio)
+  console.log('🔍 Tipo do relatório:', typeof relatorio)
+  console.log('🆔 ID do relatório:', relatorio?.id)
+  
   relatorioParaExcluir.value = relatorio
   mostrarModalExclusao.value = true
+  
+  console.log('✅ Modal de exclusão ativado:', mostrarModalExclusao.value)
+  console.log('📝 Relatório definido para exclusão:', relatorioParaExcluir.value)
 }
 
 const handleAcoesRelatorio = ({ acao, relatorio }) => {

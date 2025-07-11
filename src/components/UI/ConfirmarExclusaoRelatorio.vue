@@ -1,313 +1,412 @@
-<template>
-  <div class="modal-overlay" @click="cancelar">
-    <div class="modal-container" @click.stop>
-      <!-- Header -->
-      <div class="modal-header">
-        <div class="warning-icon">⚠️</div>
-        <h2 class="modal-title">Confirmar Exclusão</h2>
-      </div>
-
-      <!-- Conteúdo -->
-      <div class="modal-content">
-        <p class="confirmation-text">
-          Tem certeza que deseja excluir o relatório <strong>"{{ relatorio?.nome }}"</strong>?
-        </p>
-        
-        <div class="info-box">
-          <div class="info-details">
-            <p><strong>Pasta:</strong> {{ relatorio?.pasta_titulo || 'Sem pasta' }}</p>
-            <p><strong>Tamanho:</strong> {{ formatarTamanho(relatorio?.tamanho || 0) }}</p>
-            <p><strong>Criado em:</strong> {{ formatarData(relatorio?.created_at) }}</p>
-          </div>
-        </div>
-
-        <div class="warning-box">
-          <div class="warning-content">
-            <p><strong>Atenção:</strong> Esta ação não pode ser desfeita.</p>
-            <p>O relatório será permanentemente removido do sistema.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Footer -->
-      <div class="modal-footer">
-        <button 
-          type="button" 
-          class="secondary-btn" 
-          @click="cancelar"
-          :disabled="loading"
-        >
-          Cancelar
-        </button>
-        <button 
-          type="button" 
-          class="danger-btn" 
-          @click="confirmarExclusao"
-          :disabled="loading"
-        >
-          <span v-if="loading" class="loading-spinner"></span>
-          {{ loading ? 'Excluindo...' : 'Excluir Relatório' }}
-        </button>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup>
-import { ref } from 'vue'
+import { defineEmits, defineProps, ref, onMounted, watch } from 'vue'
+import { supabase } from '../../lib/supabase.js'
+import { useAuthStore } from '../../stores/auth.js'
+import Button from './Button.vue'
+import AlertaSucesso from './AlertaSucesso.vue'
 
 const props = defineProps({
   relatorio: {
     type: Object,
     required: true
+  },
+  visible: {
+    type: Boolean,
+    default: true
   }
 })
 
 const emit = defineEmits(['cancelar', 'excluir'])
 
+const { session } = useAuthStore()
 const loading = ref(false)
+const showSucesso = ref(false)
+const mensagemSucesso = ref('')
+const modalVisible = ref(true)
 
-const confirmarExclusao = async () => {
+const handleCancelar = () => {
+  console.log('❌ handleCancelar chamado! showSucesso:', showSucesso.value, 'modalVisible:', modalVisible.value)
+  if (showSucesso.value) {
+    console.log('❌ FECHANDO ALERTA DE SUCESSO via handleCancelar!')
+    showSucesso.value = false
+    modalVisible.value = true
+  } else {
+    console.log('❌ Emitindo evento cancelar')
+    emit('cancelar')
+  }
+}
+
+const handleExcluir = async () => {
+  console.log('🗑️ INÍCIO DA FUNÇÃO HANDLEEXCLUIR RELATÓRIO - PRIMEIRA LINHA!')
+  console.log('🔍 Debug - Props recebidas:', props)
+  console.log('🔍 Debug - Relatório:', props.relatorio)
+  console.log('🔍 Debug - Session:', session)
+  
+  // Validações mais rigorosas
+  if (!props.relatorio) {
+    console.error('❌ Relatório não disponível:', props.relatorio)
+    alert('Erro: Relatório não encontrado')
+    return
+  }
+  
+  if (typeof props.relatorio !== 'object') {
+    console.error('❌ Relatório não é um objeto:', typeof props.relatorio, props.relatorio)
+    alert('Erro: Dados do relatório inválidos')
+    return
+  }
+  
+  if (!props.relatorio.id) {
+    console.error('❌ Relatório não possui ID:', props.relatorio)
+    alert('Erro: Relatório não possui ID válido')
+    return
+  }
+  
+  if (!session || !session.value) {
+    console.error('❌ Sessão não disponível')
+    alert('Erro: Sessão não encontrada')
+    return
+  }
+  
+  if (!session.value.user || !session.value.user.id) {
+    console.error('❌ Sessão sem usuário válido:', session.value)
+    alert('Erro: Sessão de usuário inválida')
+    return
+  }
+
+  loading.value = true
+  
   try {
-    loading.value = true
-    
-    const { supabase } = await import('../../lib/supabase.js')
-    const { useAuthStore } = await import('../../stores/auth.js')
-    
-    const authStore = useAuthStore()
-    const usuario = authStore.user.value
-    
-    if (!usuario) {
-      throw new Error('Usuário não autenticado')
-    }
+    console.log('🔄 Iniciando processo de exclusão do relatório...')
+    console.log('📋 Relatório:', props.relatorio)
+    console.log('🔑 Session:', session.value)
 
-    // Excluir relatório do banco
-    const { error: errorExcluir } = await supabase
+    // Excluir o relatório do banco de dados
+    console.log('🗑️ Excluindo relatório ID:', props.relatorio.id)
+    
+    const { error: deleteError } = await supabase
       .from('relatorios')
       .delete()
       .eq('id', props.relatorio.id)
-      .eq('uuid', usuario.id)
+      .eq('uuid', session.value.user.id) // Garantir que só exclua relatórios do usuário
 
-    if (errorExcluir) {
-      throw errorExcluir
-    }
-
-    // Se o relatório tem arquivo (isFile: true), tentar excluir do storage
-    if (props.relatorio.isFile && props.relatorio.url) {
-      try {
-        // Extrair o nome do arquivo da URL
-        const urlParts = props.relatorio.url.split('/')
-        const fileName = urlParts[urlParts.length - 1]
-        
-        const { error: errorStorage } = await supabase.storage
-          .from('relatorios')
-          .remove([fileName])
-        
-        if (errorStorage) {
-          console.warn('Erro ao excluir arquivo do storage:', errorStorage)
-          // Não falhar a exclusão se o arquivo não puder ser removido do storage
-        }
-      } catch (storageError) {
-        console.warn('Erro ao excluir arquivo do storage:', storageError)
-      }
+    if (deleteError) {
+      console.error('❌ Erro ao excluir relatório:', deleteError)
+      throw new Error('Erro ao excluir relatório')
     }
 
     console.log('✅ Relatório excluído com sucesso')
+
+    // Fechar modal PRIMEIRO - força fechamento
+    console.log('🔒 Fechando modal - modalVisible:', modalVisible.value)
+    modalVisible.value = false
+    console.log('🔒 Modal fechado - modalVisible agora é:', modalVisible.value)
+    
+    // Aguardar animação de fechamento
+    console.log('⏳ Aguardando animação de fechamento (400ms)...')
+    await new Promise(resolve => setTimeout(resolve, 400))
+    
+    // Fechar completamente pelo pai
+    console.log('📢 Emitindo evento "excluir" para o pai')
     emit('excluir')
+    
+    // Aguardar mais um pouco
+    console.log('⏳ Aguardando mais um pouco (200ms)...')
+    await new Promise(resolve => setTimeout(resolve, 200))
+    
+    // AGORA mostrar sucesso
+    console.log('✅ Mostrando alerta de sucesso')
+    mensagemSucesso.value = 'Relatório excluído com sucesso!'
+    showSucesso.value = true
+    console.log('🎯 showSucesso definido como true:', showSucesso.value)
 
   } catch (error) {
-    console.error('Erro ao excluir relatório:', error)
-    // Aqui você pode adicionar tratamento de erro específico
-    throw error
+    console.error('❌ Erro no processo de exclusão:', error)
+    
+    // Fechar modal primeiro mesmo em caso de erro
+    emit('excluir')
+    
+    // Aguardar fechar antes de mostrar erro
+    setTimeout(() => {
+      alert(`Erro: ${error.message}`)
+    }, 500)
   } finally {
     loading.value = false
   }
 }
 
-const cancelar = () => {
-  emit('cancelar')
+const handleFecharSucesso = () => {
+  console.log('🔔 handleFecharSucesso chamado! showSucesso era:', showSucesso.value)
+  showSucesso.value = false
+  console.log('🔔 showSucesso agora é:', showSucesso.value)
+  // Modal já foi fechado, não precisa emitir novamente
 }
 
-const formatarTamanho = (bytes) => {
-  if (bytes === 0) return '0 Bytes'
-  
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
+// Debug - verificar quando o componente é montado
+onMounted(() => {
+  console.log('🚀 Componente ConfirmarExclusaoRelatorio montado')
+  console.log('🔍 Props no mounted:', props)
+  console.log('🔍 Relatório no mounted:', props.relatorio)
+})
 
-const formatarData = (dateString) => {
-  if (!dateString) return 'Data não disponível'
-  
-  try {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('pt-BR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  } catch (error) {
-    return 'Data inválida'
-  }
-}
+// Watch para monitorar mudanças na prop relatório
+watch(() => props.relatorio, (novoRelatorio, relatorioAnterior) => {
+  console.log('👀 Relatório alterado:')
+  console.log('  - Anterior:', relatorioAnterior)
+  console.log('  - Novo:', novoRelatorio)
+}, { immediate: true, deep: true })
 </script>
+
+<template>
+  <!-- Loading quando relatório não está disponível -->
+  <div v-if="visible && modalVisible && (!props.relatorio || !props.relatorio.id)" class="modal-overlay">
+    <div class="modal-container">
+      <div class="loading-process">
+        <div class="loading-spinner"></div>
+        <p>Carregando dados do relatório...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal principal quando relatório está disponível -->
+  <div v-else-if="visible && modalVisible && props.relatorio && props.relatorio.id" class="modal-overlay">
+    <div class="modal-container">
+      <!-- Ícone de fechar -->
+      <button class="close-button" @click="handleCancelar" :disabled="loading">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M15 5L5 15M5 5l10 10" stroke="#667085" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <!-- Ícone e Título na mesma linha -->
+      <div class="header-container">
+        <div class="icon-container">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <rect width="48" height="48" rx="10" fill="#FEF3F2"/>
+            <path d="M24 28V24M24 20H24.01M32 24C32 28.4183 28.4183 32 24 32C19.5817 32 16 28.4183 16 24C16 19.5817 19.5817 16 24 16C28.4183 16 32 19.5817 32 24Z" stroke="#F04438" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h2 class="title">Excluir relatório</h2>
+      </div>
+
+      <!-- Descrição -->
+      <div class="description">
+        <p class="small-text">
+          Você tem certeza que deseja excluir este relatório? Esta ação não pode ser desfeita.
+        </p>
+        <p class="small-text">
+          Ao excluir este relatório, todos os dados relacionados a ele serão removidos permanentemente do sistema.
+        </p>
+        <p class="confirmation">
+          Tem certeza que deseja excluir este relatório?
+        </p>
+      </div>
+
+      <!-- Informações do relatório -->
+      <div class="relatorio-info">
+        <p><strong>Nome:</strong> {{ props.relatorio.nome || 'N/A' }}</p>
+        <p><strong>Tipo:</strong> {{ props.relatorio.isFile ? 'Arquivo' : 'Relatório HTML' }}</p>
+        <p><strong>Data:</strong> {{ props.relatorio.created_at ? new Date(props.relatorio.created_at).toLocaleDateString('pt-BR') : 'N/A' }}</p>
+      </div>
+
+      <!-- Botões -->
+      <div class="buttons-container">
+        <Button 
+          label="Cancelar" 
+          type="outline" 
+          @click="handleCancelar"
+          :disabled="loading"
+          class="cancel-button"
+        />
+        <button 
+          @click="handleExcluir"
+          :disabled="loading"
+          class="custom-red-button"
+        >
+          {{ loading ? 'Excluindo...' : 'Excluir' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerta de Sucesso - Independente do modal (modal já foi fechado) -->
+  <AlertaSucesso
+    v-if="showSucesso"
+    :mensagem="mensagemSucesso"
+    @fechar="handleFecharSucesso"
+  />
+</template>
 
 <style scoped>
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
 .modal-container {
+  width: 544px;
   background: white;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
+  border-radius: 18px;
+  padding: 20px;
+  position: relative;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
-.modal-header {
-  background: #fef2f2;
-  color: #dc2626;
-  padding: 1rem 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  border-radius: 12px 12px 0 0;
-  border-bottom: 1px solid #fecaca;
-}
-
-.warning-icon {
-  font-size: 1.5rem;
-  flex-shrink: 0;
-}
-
-.modal-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 0;
-  color: #dc2626;
-}
-
-.modal-content {
-  padding: 1.5rem;
-}
-
-.confirmation-text {
-  font-size: 1rem;
-  color: #374151;
-  margin: 0 0 1.5rem 0;
-  line-height: 1.6;
-}
-
-.info-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-}
-
-.info-details p {
-  margin: 0;
-  font-size: 0.875rem;
-  color: #4b5563;
-}
-
-.info-details p:not(:last-child) {
-  margin-bottom: 0.5rem;
-}
-
-.warning-box {
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
-  border-radius: 8px;
-  padding: 1rem;
-}
-
-.warning-content p {
-  margin: 0;
-  font-size: 0.875rem;
-  color: #92400e;
-}
-
-.warning-content p:not(:last-child) {
-  margin-bottom: 0.5rem;
-}
-
-.modal-footer {
-  background: #f8fafc;
-  padding: 1rem 1.5rem;
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  border-top: 1px solid #e2e8f0;
-  border-radius: 0 0 12px 12px;
-}
-
-.secondary-btn,
-.danger-btn {
-  border-radius: 8px;
-  padding: 0.75rem 1.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.close-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: none;
   border: none;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
 }
 
-.secondary-btn {
-  background: white;
-  color: #374151;
-  border: 1px solid #d1d5db;
+.close-button:hover {
+  background-color: #F9FAFB;
 }
 
-.secondary-btn:hover:not(:disabled) {
-  background: #f9fafb;
-  border-color: #9ca3af;
-}
-
-.danger-btn {
-  background: #dc2626;
-  color: white;
-}
-
-.danger-btn:hover:not(:disabled) {
-  background: #b91c1c;
-}
-
-.danger-btn:disabled,
-.secondary-btn:disabled {
+.close-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
+.header-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.icon-container {
+  flex-shrink: 0;
+}
+
+.title {
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #101828;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.description {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: #475467;
+  line-height: 1.4;
+  margin-bottom: 16px;
+  text-align: left;
+  margin-left: 64px; /* 48px (largura do ícone) + 16px (gap) */
+}
+
+.description p {
+  margin: 0 0 12px 0;
+}
+
+.description p:last-child {
+  margin-bottom: 0;
+}
+
+.description .small-text {
+  font-size: 12px;
+}
+
+.confirmation {
+  font-weight: 500;
+  color: #344054;
+}
+
+.relatorio-info {
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  margin-left: 64px; /* Alinhado com a descrição */
+}
+
+.relatorio-info p {
+  margin: 0 0 8px 0;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: #374151;
+}
+
+.relatorio-info p:last-child {
+  margin-bottom: 0;
+}
+
+.relatorio-info strong {
+  color: #111827;
+  font-weight: 500;
+}
+
+.buttons-container {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.cancel-button,
+.custom-red-button {
+  flex: 1;
+  max-width: 160px;
+}
+
+.custom-red-button {
+  width: 100%;
+  height: 44px;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 16px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+  background-color: #F04438;
+  color: white;
+  border: 1px solid #F04438;
+}
+
+.custom-red-button:hover {
+  background-color: #D92D20;
+  border-color: #D92D20;
+}
+
+.custom-red-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loading-process {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+}
+
 .loading-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid transparent;
-  border-top: 2px solid currentColor;
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #0468FA;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+  margin-bottom: 16px;
 }
 
 @keyframes spin {
@@ -315,56 +414,36 @@ const formatarData = (dateString) => {
   100% { transform: rotate(360deg); }
 }
 
-/* Responsivo */
-@media (max-width: 768px) {
+.loading-process p {
+  margin: 0;
+  color: #475467;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+}
+
+@media (max-width: 600px) {
   .modal-container {
-    margin: 0.5rem;
-    max-width: calc(100% - 1rem);
+    width: calc(100vw - 32px);
+    max-width: 544px;
+    margin: 0 16px;
+    padding: 20px;
   }
   
-  .modal-header {
-    padding: 0.75rem 1rem;
-  }
-  
-  .modal-title {
-    font-size: 1rem;
-  }
-  
-  .modal-content {
-    padding: 1rem;
-  }
-  
-  .modal-footer {
-    padding: 0.75rem 1rem;
+  .buttons-container {
     flex-direction: column;
   }
   
-  .secondary-btn,
-  .danger-btn {
-    width: 100%;
-    justify-content: center;
+  .cancel-button,
+  .custom-red-button {
+    max-width: none;
   }
-}
 
-@media (max-width: 480px) {
-  .modal-overlay {
-    padding: 0;
+  .description {
+    margin-left: 0;
   }
-  
-  .modal-container {
-    border-radius: 0;
-    height: 100vh;
-    max-height: 100vh;
-    margin: 0;
-    max-width: 100%;
-  }
-  
-  .modal-header {
-    border-radius: 0;
-  }
-  
-  .modal-footer {
-    border-radius: 0;
+
+  .relatorio-info {
+    margin-left: 0;
   }
 }
 </style> 

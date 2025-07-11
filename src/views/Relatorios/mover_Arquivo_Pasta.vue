@@ -1,82 +1,67 @@
 <template>
-  <div class="modal-overlay" @click="fecharModal">
-    <div class="modal-container" @click.stop>
-      <!-- Header -->
-      <div class="modal-header">
-        <h2 class="modal-title">Mover Relatório</h2>
-        <button class="close-button" @click="fecharModal">×</button>
+  <div class="modal-overlay" @click.self="$emit('close')">
+    <div class="modal-content">
+      <!-- Botão de fechar (X) -->
+      <button class="btn-close" @click="$emit('close')">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 6L6 18M6 6L18 18" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <!-- Ícone superior -->
+      <div class="icone-superior">
+        <img src="/images/pastas.svg" alt="Ícone pastas" width="56" height="56">
       </div>
 
-      <!-- Conteúdo -->
-      <div class="modal-content">
-        <div class="form-group">
-          <label for="pastaDestino" class="form-label">Selecione a pasta de destino:</label>
-          <select
-            id="pastaDestino"
-            v-model="pastaDestinoId"
-            class="form-select"
-            :class="{ 'input-error': mostrarErro }"
-          >
-            <option value="">Selecione uma pasta</option>
-            <option 
-              v-for="pasta in pastasDisponiveis" 
-              :key="pasta.id" 
-              :value="pasta.id"
-              :disabled="pasta.id === relatorio?.pasta_id"
-            >
-              {{ pasta.titulo }}
-              <span v-if="pasta.id === relatorio?.pasta_id"> (atual)</span>
-            </option>
-          </select>
-          <div v-if="mostrarErro" class="error-message">
-            {{ mensagemErro }}
-          </div>
-        </div>
+      <!-- Título -->
+      <h2 class="titulo">Mover relatório</h2>
 
-        <div class="info-box">
-          <div class="info-icon">📁</div>
-          <div class="info-text">
-            <p><strong>Relatório:</strong> {{ relatorio?.nome }}</p>
-            <p><strong>Pasta atual:</strong> {{ relatorio?.pasta_titulo || 'Sem pasta' }}</p>
-            <p><strong>Tamanho:</strong> {{ formatarTamanho(relatorio?.tamanho || 0) }}</p>
-          </div>
-        </div>
+      <!-- Subtítulo -->
+      <p class="subtitulo">Selecione a pasta de destino para "{{ relatorio?.nome }}"</p>
 
-        <div class="warning-box" v-if="pastaDestinoId && pastasDisponiveis.length > 0">
-          <div class="warning-icon">⚠️</div>
-          <div class="warning-text">
-            <p><strong>Atenção:</strong> O relatório será movido para a pasta selecionada.</p>
-            <p>Esta ação não pode ser desfeita.</p>
-          </div>
-        </div>
+      <!-- Dropdown para seleção da pasta -->
+      <div class="dropdown-container">
+        <Dropdown
+          :options="opcoesPastas"
+          :defaultSelected="0"
+          :showPlaceholderIcon="true"
+          iconType="pasta"
+          placeholderText="Selecione uma pasta"
+          @option-selected="selecionarPasta"
+        />
       </div>
 
-      <!-- Footer -->
-      <div class="modal-footer">
-        <button 
-          type="button" 
-          class="secondary-btn" 
-          @click="fecharModal"
-          :disabled="loading"
-        >
-          Cancelar
-        </button>
-        <button 
-          type="button" 
-          class="primary-btn" 
+      <!-- Mensagem de erro -->
+      <div v-if="mostrarErro" class="erro-mensagem">
+        Erro ao carregar pastas. Tente novamente.
+      </div>
+
+      <!-- Botões -->
+      <div class="botoes-container">
+        <Button 
+          label="Cancelar" 
+          type="outline" 
+          button-type="button"
+          @click="$emit('close')"
+        />
+        <Button 
+          label="Mover" 
+          type="primary" 
+          button-type="button"
+          :disabled="loading || !pastaSelecionada"
           @click="moverRelatorio"
-          :disabled="loading || !pastaDestinoId || pastaDestinoId === relatorio?.pasta_id"
-        >
-          <span v-if="loading" class="loading-spinner"></span>
-          {{ loading ? 'Movendo...' : 'Mover Relatório' }}
-        </button>
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
+import { supabase } from '../../lib/supabase'
+import { useAuthStore } from '../../stores/auth'
+import Button from '../../components/UI/Button.vue'
+import Dropdown from '../../components/UI/Dropdown.vue'
 
 const props = defineProps({
   relatorio: {
@@ -87,147 +72,93 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'relatorio-movido'])
 
-// Estados
-const pastaDestinoId = ref('')
-const pastasUsuario = ref([])
+const { user } = useAuthStore()
+const opcoesPastas = ref([])
+const pastaSelecionada = ref(null)
 const loading = ref(false)
 const mostrarErro = ref(false)
-const mensagemErro = ref('')
 
-// Computed para pastas disponíveis (excluindo a atual)
-const pastasDisponiveis = computed(() => {
-  return pastasUsuario.value.filter(pasta => pasta.id !== props.relatorio?.pasta_id)
-})
-
-// Carregar pastas do usuário
-const carregarPastasUsuario = async () => {
+// Função para carregar todas as pastas do usuário (exceto a atual)
+async function carregarPastas() {
   try {
-    const { supabase } = await import('../../lib/supabase.js')
-    const { useAuthStore } = await import('../../stores/auth.js')
-    
-    const authStore = useAuthStore()
-    const usuario = authStore.user.value
-    
-    if (!usuario) {
-      throw new Error('Usuário não autenticado')
+    if (!user.value?.id) {
+      console.error('Usuário não autenticado')
+      return
     }
 
-    const { data: pastas, error } = await supabase
+    const { data, error } = await supabase
       .from('pasta_relatorios')
       .select('id, titulo')
-      .eq('uuid', usuario.id)
+      .eq('uuid', user.value.id)
+      .neq('id', props.relatorio.pasta_id) // Excluir pasta atual
       .order('titulo', { ascending: true })
 
     if (error) {
       throw error
     }
 
-    pastasUsuario.value = pastas || []
+    // Formatar dados para o dropdown
+    opcoesPastas.value = data.map(pasta => ({
+      id: pasta.id,
+      label: pasta.titulo,
+      icon: '/images/iconPasta.svg'
+    }))
 
   } catch (error) {
     console.error('Erro ao carregar pastas:', error)
     mostrarErro.value = true
-    mensagemErro.value = 'Erro ao carregar pastas disponíveis'
+    opcoesPastas.value = []
   }
 }
 
-// Mover relatório
-const moverRelatorio = async () => {
-  if (!pastaDestinoId.value) {
-    mostrarErro.value = true
-    mensagemErro.value = 'Selecione uma pasta de destino'
-    return
-  }
+// Função chamada quando uma pasta é selecionada no dropdown
+const selecionarPasta = (opcao) => {
+  pastaSelecionada.value = opcao
+  console.log('Pasta selecionada:', opcao)
+}
 
-  if (pastaDestinoId.value === props.relatorio?.pasta_id) {
-    mostrarErro.value = true
-    mensagemErro.value = 'Selecione uma pasta diferente da atual'
-    return
-  }
-
+// Função para mover o relatório para a pasta selecionada
+async function moverRelatorio() {
+  if (!pastaSelecionada.value) return
+  
+  loading.value = true
+  mostrarErro.value = false
+  
   try {
-    loading.value = true
-    mostrarErro.value = false
-
-    const { supabase } = await import('../../lib/supabase.js')
-    const { useAuthStore } = await import('../../stores/auth.js')
-    
-    const authStore = useAuthStore()
-    const usuario = authStore.user.value
-    
-    if (!usuario) {
-      throw new Error('Usuário não autenticado')
-    }
-
-    // Verificar se já existe um relatório com o mesmo nome na pasta de destino
-    const { data: existeRelatorio, error: errorVerificar } = await supabase
-      .from('relatorios')
-      .select('id')
-      .eq('nome', props.relatorio.nome)
-      .eq('pasta_id', pastaDestinoId.value)
-      .eq('uuid', usuario.id)
-
-    if (errorVerificar) {
-      throw errorVerificar
-    }
-
-    if (existeRelatorio && existeRelatorio.length > 0) {
-      mostrarErro.value = true
-      mensagemErro.value = 'Já existe um relatório com este nome na pasta de destino'
+    // Verificar se usuário está autenticado
+    if (!user.value?.id) {
+      alert('Usuário não autenticado. Faça login novamente.')
       return
     }
-
-    // Mover relatório
-    const { error: errorMover } = await supabase
-      .from('relatorios')
-      .update({ pasta_id: pastaDestinoId.value })
-      .eq('id', props.relatorio.id)
-      .eq('uuid', usuario.id)
-
-    if (errorMover) {
-      throw errorMover
-    }
-
-    // Buscar informações da pasta de destino
-    const pastaDestino = pastasUsuario.value.find(p => p.id === pastaDestinoId.value)
     
-    console.log('✅ Relatório movido com sucesso')
-
-    // Emitir evento de sucesso
+    // Atualizar relatório com nova pasta_id
+    const { error } = await supabase
+      .from('relatorios')
+      .update({ pasta_id: pastaSelecionada.value.id })
+      .eq('id', props.relatorio.id)
+    
+    if (error) {
+      throw error
+    }
+    
+    // Sucesso - emitir evento e fechar modal
     emit('relatorio-movido', {
       relatorio: props.relatorio,
-      pastaDestinoId: pastaDestinoId.value,
-      pastaDestinoTitulo: pastaDestino?.titulo || 'Pasta desconhecida'
+      pastaDestino: pastaSelecionada.value
     })
-
+    emit('close')
+    
   } catch (error) {
     console.error('Erro ao mover relatório:', error)
-    mostrarErro.value = true
-    mensagemErro.value = 'Erro ao mover relatório. Tente novamente.'
+    alert('Erro ao mover o relatório. Tente novamente.')
   } finally {
     loading.value = false
   }
 }
 
-// Fechar modal
-const fecharModal = () => {
-  emit('close')
-}
-
-// Formatar tamanho do arquivo
-const formatarTamanho = (bytes) => {
-  if (bytes === 0) return '0 Bytes'
-  
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
-
-// Carregar dados quando component montar
+// Carregar pastas quando componente é montado
 onMounted(() => {
-  carregarPastasUsuario()
+  carregarPastas()
 })
 </script>
 
@@ -243,272 +174,85 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-}
-
-.modal-container {
-  background: white;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-.modal-header {
-  background: #0468FA;
-  color: white;
-  padding: 1rem 1.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-radius: 12px 12px 0 0;
-}
-
-.modal-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  font-size: 1.5rem;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-  line-height: 1;
-}
-
-.close-button:hover {
-  background: rgba(255, 255, 255, 0.1);
+  padding: 20px;
 }
 
 .modal-content {
-  padding: 1.5rem;
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-  margin-bottom: 0.5rem;
-}
-
-.form-select {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  box-sizing: border-box;
-  cursor: pointer;
-  background: white;
+  max-width: 400px;
+  position: relative;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
-.form-select:focus {
-  outline: none;
-  border-color: #0468FA;
-  box-shadow: 0 0 0 3px rgba(4, 104, 250, 0.1);
-}
-
-.form-select option:disabled {
-  color: #9ca3af;
-  font-style: italic;
-}
-
-.input-error {
-  border-color: #ef4444;
-}
-
-.error-message {
-  color: #ef4444;
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-}
-
-.info-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 1rem;
-  display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.info-icon {
-  font-size: 1.25rem;
-  flex-shrink: 0;
-}
-
-.info-text {
-  flex: 1;
-}
-
-.info-text p {
-  margin: 0;
-  font-size: 0.875rem;
-  color: #4b5563;
-}
-
-.info-text p:not(:last-child) {
-  margin-bottom: 0.5rem;
-}
-
-.warning-box {
-  background: #fef3c7;
-  border: 1px solid #f59e0b;
-  border-radius: 8px;
-  padding: 1rem;
-  display: flex;
-  gap: 0.75rem;
-}
-
-.warning-icon {
-  font-size: 1.25rem;
-  flex-shrink: 0;
-}
-
-.warning-text {
-  flex: 1;
-}
-
-.warning-text p {
-  margin: 0;
-  font-size: 0.875rem;
-  color: #92400e;
-}
-
-.warning-text p:not(:last-child) {
-  margin-bottom: 0.5rem;
-}
-
-.modal-footer {
-  background: #f8fafc;
-  padding: 1rem 1.5rem;
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  border-top: 1px solid #e2e8f0;
-  border-radius: 0 0 12px 12px;
-}
-
-.secondary-btn,
-.primary-btn {
-  border-radius: 8px;
-  padding: 0.75rem 1.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.btn-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
   border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.btn-close:hover {
+  background-color: #f3f4f6;
+}
+
+.icone-superior {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  justify-content: flex-start;
+  margin-bottom: 20px;
+  margin-top: 8px;
 }
 
-.secondary-btn {
-  background: white;
-  color: #374151;
-  border: 1px solid #d1d5db;
+.titulo {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  text-align: left;
+  margin: 0 0 8px 0;
 }
 
-.secondary-btn:hover:not(:disabled) {
-  background: #f9fafb;
-  border-color: #9ca3af;
+.subtitulo {
+  font-size: 14px;
+  font-weight: 400;
+  color: #6b7280;
+  text-align: left;
+  margin: 0 0 20px 0;
 }
 
-.primary-btn {
-  background: #0468FA;
-  color: white;
+.dropdown-container {
+  margin-bottom: 8px;
 }
 
-.primary-btn:hover:not(:disabled) {
-  background: #0356D6;
+.erro-mensagem {
+  color: #DC2626;
+  font-size: 14px;
+  margin-bottom: 16px;
+  text-align: left;
 }
 
-.primary-btn:disabled,
-.secondary-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.loading-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid transparent;
-  border-top: 2px solid currentColor;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Responsivo */
-@media (max-width: 768px) {
-  .modal-container {
-    margin: 0.5rem;
-    max-width: calc(100% - 1rem);
-  }
-  
-  .modal-header {
-    padding: 0.75rem 1rem;
-  }
-  
-  .modal-title {
-    font-size: 1rem;
-  }
-  
-  .modal-content {
-    padding: 1rem;
-  }
-  
-  .modal-footer {
-    padding: 0.75rem 1rem;
-    flex-direction: column;
-  }
-  
-  .secondary-btn,
-  .primary-btn {
-    width: 100%;
-    justify-content: center;
-  }
+.botoes-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 24px;
 }
 
 @media (max-width: 480px) {
-  .modal-overlay {
-    padding: 0;
+  .modal-content {
+    padding: 24px;
+    margin: 16px;
   }
   
-  .modal-container {
-    border-radius: 0;
-    height: 100vh;
-    max-height: 100vh;
-    margin: 0;
-    max-width: 100%;
-  }
-  
-  .modal-header {
-    border-radius: 0;
-  }
-  
-  .modal-footer {
-    border-radius: 0;
+  .botoes-container {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 }
 </style> 

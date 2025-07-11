@@ -42,13 +42,15 @@
       >
         <!-- Ícone da Intimação -->
         <div class="intimacao-icon">
-          <svg viewBox="0 0 24 24" fill="none" :stroke="activeTab === 'nao-visualizadas' ? '#EF4444' : 'currentColor'" class="mail-icon">
-            <!-- Envelope -->
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-            <polyline points="22,6 12,13 2,6"/>
-            <!-- Indicador de novo (se não visualizada) -->
-            <circle v-if="!intimacao.visualizado" cx="20" cy="4" r="3" fill="#EF4444"/>
-          </svg>
+          <img 
+            :src="!intimacao.visualizado ? '/images/balancaativacard.svg' : '/images/balancainativacard.svg'"
+            alt="Intimação" 
+            class="mail-icon"
+            width="38"
+            height="38"
+          />
+          <!-- Indicador de novo (se não visualizada) -->
+          <div v-if="!intimacao.visualizado" class="notification-dot"></div>
         </div>
 
         <!-- Informações da Intimação -->
@@ -135,7 +137,7 @@
           
           <!-- Ícone Email -->
           <img 
-            src="/images/iconEmail.svg" 
+            src="/images/envelope_azul.svg" 
             alt="Enviar por email" 
             class="action-icon action-icon-email"
             @click.stop="enviarPorEmail(intimacao)"
@@ -570,6 +572,7 @@ const marcarComoVisualizada = async (intimacao) => {
     console.log('✅ Intimação marcada como visualizada com sucesso')
     
     // Recarregar a lista completa do banco para garantir dados atualizados
+    // IMPORTANTE: Preservar o filtro atual
     await carregarIntimacoes(props.searchTerm)
     
     // Atualizar contador global de intimações não visualizadas
@@ -595,7 +598,12 @@ const marcarComoVisualizada = async (intimacao) => {
 
 const carregarIntimacoes = async (searchTerm = '') => {
   loading.value = true
-  console.log('🔍 Carregando intimações com termo:', searchTerm)
+  
+  // IMPORTANTE: Se searchTerm não foi passado, usar o props.searchTerm atual
+  // Isso garante que o filtro seja preservado quando recarregamos a lista
+  const termoAtual = searchTerm || props.searchTerm || ''
+  
+  console.log('🔍 Carregando intimações com termo:', termoAtual)
   
   try {
     // Obter usuário autenticado
@@ -627,8 +635,8 @@ const carregarIntimacoes = async (searchTerm = '') => {
     }
 
     // Se houver termo de busca, aplicar filtros de busca
-    if (searchTerm && searchTerm.trim()) {
-      const termo = searchTerm.trim()
+    if (termoAtual && termoAtual.trim()) {
+      const termo = termoAtual.trim()
       console.log('🔍 Aplicando filtro de busca para:', termo)
       
       // Usar sintaxe correta do Supabase para OR
@@ -652,7 +660,7 @@ const carregarIntimacoes = async (searchTerm = '') => {
     console.error('❌ Erro ao carregar intimações:', error)
     
     // Se há termo de busca e deu erro, não fazer fallback para não confundir o usuário
-    if (searchTerm && searchTerm.trim()) {
+    if (termoAtual && termoAtual.trim()) {
       console.log('❌ Erro na busca, não executando fallback para não confundir')
       intimacoes.value = []
     } else {
@@ -1219,18 +1227,23 @@ const fecharAlertaSucessoEmail = () => {
 }
 
 // Watcher para recarregar dados quando pesquisa mudar (com debounce)
-watch(() => props.searchTerm, (newSearchTerm) => {
-  paginaAtual.value = 1
+watch(() => props.searchTerm, (newSearchTerm, oldSearchTerm) => {
+  console.log('🔄 SearchTerm mudou de:', oldSearchTerm, 'para:', newSearchTerm)
   
-  // Limpar timeout anterior
-  if (searchTimeout) {
-    clearTimeout(searchTimeout)
+  // Só recarrega se realmente mudou
+  if (newSearchTerm !== oldSearchTerm) {
+    paginaAtual.value = 1
+    
+    // Limpar timeout anterior
+    if (searchTimeout) {
+      clearTimeout(searchTimeout)
+    }
+    
+    // Definir novo timeout para debounce
+    searchTimeout = setTimeout(() => {
+      carregarIntimacoes(newSearchTerm)
+    }, 300)
   }
-  
-  // Definir novo timeout para debounce
-  searchTimeout = setTimeout(() => {
-    carregarIntimacoes(newSearchTerm)
-  }, 300)
 })
 
 // Watcher para recarregar dados quando o processoId mudar
@@ -1386,10 +1399,21 @@ onMounted(async () => {
 }
 
 .mail-icon {
-  width: 42px;
-  height: 42px;
-  color: #9ca3af;
-  stroke-width: 1.5;
+  width: 38px;
+  height: 38px;
+  transition: filter 0.2s ease;
+}
+
+.notification-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  background-color: #EF4444;
+  border-radius: 50%;
+  border: 2px solid #FFFFFF;
+  z-index: 10;
 }
 
 /* Informações */
@@ -1860,8 +1884,8 @@ onMounted(async () => {
   }
 
   .mail-icon {
-    width: 24px;
-    height: 24px;
+    width: 38px;
+    height: 38px;
   }
 
   .intimacao-processo {

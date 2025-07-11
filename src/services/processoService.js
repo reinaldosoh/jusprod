@@ -347,32 +347,43 @@ export const processoService = {
     try {
       console.log('🔄 Monitorando processo:', processoId);
       
+      // Garantir que temos o token JWT válido
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session || !session.access_token) {
+        console.error('❌ Erro de sessão:', sessionError);
+        throw new Error('Usuário não autenticado. Faça login novamente.');
+      }
+      
+      console.log('✅ Sessão válida obtida');
+      
+      // Chamar função de monitoramento do Escavador
       const { data, error } = await supabase.functions.invoke('monitorar-processo', {
         body: { 
           processo_id: parseInt(processoId)
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
         }
       });
 
       if (error) {
-        console.error('Erro detalhado da edge function:', error);
-        console.error('Status:', error.status);
-        console.error('Message:', error.message);
-        console.error('Context:', error.context);
+        console.error('❌ Erro da edge function:', error);
         
-        // Primeira tentativa: verificar se já temos dados no error.message
-        if (error.message && error.message.includes('não encontrado')) {
-          throw new Error('Processo não foi encontrado na base de dados do Escavador. Verifique se o número do CNJ está correto.');
-        }
-        
-        // Segunda tentativa: tentar extrair dados do contexto SEM LER O BODY DUAS VEZES
+        // Verificar se o erro contém dados estruturados
         if (error.context && error.context.status) {
           const status = error.context.status;
+          console.error(`Status HTTP: ${status}`);
           
           if (status === 404) {
             throw new Error('Processo não foi encontrado na base de dados do Escavador. Verifique se o número do CNJ está correto.');
           }
           
           if (status === 400) {
+            // Tentar extrair mensagem detalhada do erro
+            if (data && data.error) {
+              throw new Error(data.error);
+            }
             throw new Error('Dados do processo inválidos. Verifique as informações fornecidas.');
           }
           
@@ -387,10 +398,13 @@ export const processoService = {
           throw new Error(`Erro na consulta ao Escavador (${status}). Tente novamente.`);
         }
         
+        // Fallback para erros sem contexto estruturado
         throw new Error(`Erro na edge function: ${error.message || 'Erro desconhecido'}`);
       }
 
       if (!data || !data.success) {
+        console.error('❌ Resposta da função sem sucesso:', data);
+        
         if (data && data.codigo === 'LIMITE_ATINGIDO') {
           throw new Error(data.error || 'Limite de processos atingido para seu plano atual.');
         }

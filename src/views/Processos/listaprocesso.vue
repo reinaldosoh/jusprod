@@ -42,22 +42,14 @@
       >
         <!-- Ícone da Balança -->
         <div class="processo-icon">
-          <svg viewBox="0 0 24 24" fill="none" :stroke="activeTab === 'monitorados' ? '#EF4444' : 'currentColor'" class="balance-icon">
-            <!-- Haste vertical central -->
-            <line x1="12" y1="3" x2="12" y2="21"/>
-            <!-- Base -->
-            <line x1="8" y1="21" x2="16" y2="21"/>
-            <!-- Braço horizontal -->
-            <line x1="6" y1="8" x2="18" y2="8"/>
-            <!-- Prato esquerdo -->
-            <circle cx="6" cy="12" r="3"/>
-            <line x1="3" y1="12" x2="9" y2="12"/>
-            <!-- Prato direito -->
-            <circle cx="18" cy="12" r="3"/>
-            <line x1="15" y1="12" x2="21" y2="12"/>
-            <!-- Correntes -->
-            <line x1="6" y1="8" x2="6" y2="9"/>
-            <line x1="18" y1="8" x2="18" y2="9"/>
+          <!-- Ícone para processos não monitorados -->
+          <svg v-if="activeTab === 'nao-monitorados'" width="42" height="42" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4.37559 22.75H14.8756M27.1256 22.75H37.6256M21.0006 12.25V36.75M21.0006 12.25C23.4168 12.25 25.3756 10.2912 25.3756 7.875M21.0006 12.25C18.5843 12.25 16.6256 10.2912 16.6256 7.875M7.00059 36.75L35.0006 36.75M7.00059 7.87501L16.6256 7.875M16.6256 7.875C16.6256 5.45875 18.5843 3.5 21.0006 3.5C23.4168 3.5 25.3756 5.45875 25.3756 7.875M25.3756 7.875L35.0006 7.875M15.5414 25.0886C14.8401 27.7735 12.4573 29.75 9.62559 29.75C6.79391 29.75 4.41103 27.7735 3.70982 25.0886C3.65253 24.8692 3.62388 24.7596 3.62111 24.3213C3.61942 24.0526 3.71927 23.4331 3.80529 23.1786C3.94562 22.7634 4.09752 22.529 4.40133 22.0603L9.62559 14L14.8498 22.0603C15.1536 22.529 15.3056 22.7634 15.4459 23.1786C15.5319 23.4331 15.6318 24.0526 15.6301 24.3213C15.6273 24.7596 15.5986 24.8692 15.5414 25.0886ZM38.2914 25.0886C37.5901 27.7735 35.2073 29.75 32.3756 29.75C29.5439 29.75 27.161 27.7735 26.4598 25.0886C26.4025 24.8692 26.3739 24.7596 26.3711 24.3213C26.3694 24.0526 26.4693 23.4331 26.5553 23.1786C26.6956 22.7634 26.8475 22.529 27.1513 22.0603L32.3756 14L37.6018 22.0603C37.9056 22.529 38.0575 22.7634 38.1978 23.1786C38.2839 23.4331 38.3837 24.0526 38.382 24.3213C38.3792 24.7596 38.3506 24.8692 38.2933 25.0886Z" stroke="#667085" stroke-opacity="0.5" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          
+          <!-- Ícone para processos monitorados -->
+          <svg v-else width="42" height="42" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4.37754 22.75H14.8775M27.1275 22.75H37.6275M21.0025 12.25V36.75M21.0025 12.25C23.4188 12.25 25.3775 10.2912 25.3775 7.875M21.0025 12.25C18.5863 12.25 16.6275 10.2912 16.6275 7.875M7.00254 36.75L35.0025 36.75M7.00254 7.87501L16.6275 7.875M16.6275 7.875C16.6275 5.45875 18.5863 3.5 21.0025 3.5C23.4188 3.5 25.3775 5.45875 25.3775 7.875M25.3775 7.875L35.0025 7.875M15.5433 25.0886C14.8421 27.7735 12.4592 29.75 9.62754 29.75C6.79586 29.75 4.41299 27.7735 3.71177 25.0886C3.65448 24.8692 3.62583 24.7596 3.62307 24.3213C3.62137 24.0526 3.72122 23.4331 3.80724 23.1786C3.94757 22.7634 4.09948 22.529 4.40328 22.0603L9.62754 14L14.8518 22.0603C15.1556 22.529 15.3075 22.7634 15.4478 23.1786C15.5339 23.4331 15.6337 24.0526 15.632 24.3213C15.6292 24.7596 15.6006 24.8692 15.5433 25.0886ZM38.2933 25.0886C37.5921 27.7735 35.2092 29.75 32.3775 29.75C29.5459 29.75 27.163 27.7735 26.4618 25.0886C26.4045 24.8692 26.3758 24.7596 26.3731 24.3213C26.3714 24.0526 26.4712 23.4331 26.5572 23.1786C26.6976 22.7634 26.8495 22.529 27.1533 22.0603L32.3775 14L37.6018 22.0603C37.9056 22.529 38.0575 22.7634 38.1978 23.1786C38.2839 23.4331 38.3837 24.0526 38.382 24.3213C38.3792 24.7596 38.3506 24.8692 38.2933 25.0886Z" stroke="#F04438" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
 
@@ -169,12 +161,13 @@
               @click="handleEnviarWhatsapp(processo.id, $event)"
             />
             
-            <!-- Ícone de Email -->
+            <!-- Ícone Email -->
             <img 
-              src="/images/iconEmail.svg" 
-              alt="Email" 
-              class="status-icon status-icon-email" 
-              @click="handleEnviarEmail(processo.id, $event)"
+              src="/images/envelope_azul.svg" 
+              alt="Enviar por email" 
+              class="action-icon action-icon-email"
+              @click.stop="handleEnviarEmail(processo.id, $event)"
+              title="Enviar por email"
             />
             
             <!-- Ícone de Mais -->
@@ -406,6 +399,7 @@ import lembreteProcesso from '../../components/UI/Lembrete_processo.vue'
 import DeixarMonitorarProcesso from '../../components/UI/Deixar_monitorar_processo.vue'
 import EmptyProcesso from '../../components/UI/empty_processo.vue'
 import { eventBus, EVENTS } from '../../utils/eventBus'
+import { useProcessos } from '../../composables/useProcessos'
 
 const props = defineProps({
   searchTerm: {
@@ -414,9 +408,18 @@ const props = defineProps({
   }
 })
 
+// Usar o composable useProcessos
+const {
+  processos,
+  statusProcessos: limitePlano,
+  carregandoProcessos: loading,
+  erroProcessos: erro,
+  carregarProcessos,
+  carregarStatus: carregarLimitePlano,
+  carregarEstatisticas
+} = useProcessos()
+
 const activeTab = ref('nao-monitorados')
-const processos = ref([])
-const loading = ref(false)
 const paginaAtual = ref(1)
 const itensPorPagina = 20
 const processosExpandidos = ref([])
@@ -427,7 +430,13 @@ const tituloErro = ref('Erro')
 const processosMonitorando = ref(new Set()) // IDs dos processos sendo monitorados
 const algumProcessoMonitorando = computed(() => processosMonitorando.value.size > 0) // Verifica se algum processo está sendo monitorado
 const mostrarUpgrade = ref(false)
-const limitePlan = ref({ atual: 0, maximo: 0, plano: '' })
+
+// Computed para compatibilidade com o código existente
+const limitePlan = computed(() => ({
+  atual: limitePlano.value.processos_ativos,
+  maximo: limitePlano.value.max_processos,
+  plano: limitePlano.value.plano_nome
+}))
 const acoesDropdown = ref({ show: false, processoId: null, posicao: null }) // Estado do dropdown de ações
 const modalVincularCliente = ref({ show: false, processoId: null, cnj: '' }) // Estado do modal de vincular cliente
 const modalWhatsappProcesso = ref({ show: false, processoId: null, cnj: '' }) // Estado do modal de WhatsApp
@@ -590,16 +599,16 @@ const monitorarProcesso = async (processo) => {
     
     console.log('🔄 Iniciando monitoramento do processo:', processo.id)
     
-    // Importar o serviço dinamicamente
-    const { processoService } = await import('../../services/processoService')
+    // Importar o serviço de webhook dinamicamente
+    const { webhookService } = await import('../../services/webhookService')
     
-    // Chamar a função de monitoramento
-    const resultado = await processoService.monitorarProcesso(processo.id)
+    // Chamar o webhook para monitoramento
+    const resultado = await webhookService.chamarWebhook(processo.id)
     
     console.log('✅ Processo monitorado com sucesso:', resultado)
     
     // Recarregar a lista completa do banco para garantir dados atualizados
-    await carregarProcessos(props.searchTerm)
+    await carregarProcessos({ termo: props.searchTerm })
     
     // Recarregar o limite do plano para atualizar contador
     await carregarLimitePlano()
@@ -607,10 +616,14 @@ const monitorarProcesso = async (processo) => {
     // Emitir evento para atualizar outros componentes (como o Controlador)
     eventBus.emit(EVENTS.PROCESSO_MONITORADO, {
       processoId: processo.id,
-      resultado: resultado
+      resultado: resultado,
+      statusAtualizado: limitePlano.value
     })
     
-    console.log('📢 Evento PROCESSO_MONITORADO emitido para atualizar Controlador')
+    // Emitir evento específico para atualização de status
+    eventBus.emit(EVENTS.STATUS_ATUALIZADO, limitePlano.value)
+    
+    console.log('📢 Eventos PROCESSO_MONITORADO e STATUS_ATUALIZADO emitidos para atualizar componentes')
     
     // Mostrar alerta de sucesso
     mostrarAlertaSucesso.value = true
@@ -619,21 +632,18 @@ const monitorarProcesso = async (processo) => {
     console.error('❌ Erro ao monitorar processo:', error)
     
     // Configurar título e mensagem baseado no tipo de erro
-    if (error.message.includes('não foi encontrado na base de dados do Escavador')) {
-      tituloErro.value = 'CNJ não encontrado'
+    if (error.message.includes('Processo não encontrado')) {
+      tituloErro.value = 'Processo não encontrado'
       mensagemErro.value = error.message
-    } else if (error.message.includes('limite') || error.message.includes('Limite')) {
-      tituloErro.value = 'Limite atingido'
-      mensagemErro.value = error.message
-    } else if (error.message.includes('Dados do processo inválidos')) {
-      tituloErro.value = 'Dados inválidos'
-      mensagemErro.value = error.message
-    } else if (error.message.includes('concorrência')) {
-      tituloErro.value = 'Processo em andamento'
-      mensagemErro.value = 'O processo está sendo monitorado por outra operação. Aguarde alguns segundos e tente novamente.'
+    } else if (error.message.includes('Usuário não autenticado')) {
+      tituloErro.value = 'Erro de autenticação'
+      mensagemErro.value = 'Sessão expirada. Faça login novamente.'
+    } else if (error.message.includes('Erro na chamada do webhook')) {
+      tituloErro.value = 'Erro de comunicação'
+      mensagemErro.value = 'Erro ao comunicar com o serviço de monitoramento. Tente novamente.'
     } else {
       tituloErro.value = 'Erro ao monitorar'
-      mensagemErro.value = error.message || 'Erro ao monitorar processo. Tente novamente.'
+      mensagemErro.value = error.message || 'Erro ao enviar processo para monitoramento. Tente novamente.'
     }
     
     // Mostrar alerta de erro
@@ -645,102 +655,28 @@ const monitorarProcesso = async (processo) => {
   }
 }
 
-const carregarLimitePlano = async () => {
+// Função mantida para compatibilidade, mas agora usa o composable
+const carregarLimitePlanoLegacy = async () => {
   try {
-    // Obter usuário autenticado
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      console.error('❌ Erro ao obter usuário autenticado:', authError)
-      return
-    }
-
-    // Buscar informações do plano do usuário
-    const { data: userData, error: userError } = await supabase
-      .from('usuario')
-      .select('role_atual')
-      .eq('uuid', user.id)
-      .single()
-
-    if (userError) {
-      console.error('❌ Erro ao buscar plano do usuário:', userError)
-      return
-    }
-
-    // Contar processos ativos (monitorados)
-    const { count: processosAtivos, error: countError } = await supabase
-      .from('processos')
-      .select('*', { count: 'exact', head: true })
-      .eq('uuid', user.id)
-      .eq('arquivado', false)
-
-    if (countError) {
-      console.error('❌ Erro ao contar processos ativos:', countError)
-      return
-    }
-
-    // Definir limites por plano
-    const limitesPorPlano = {
-      free: 5,
-      silver: 45,
-      gold: 150,
-      platinum: 350
-    }
-
-    const plano = userData.role_atual || 'free'
-    const maximo = limitesPorPlano[plano] || 5
-
-    limitePlan.value = {
-      atual: processosAtivos || 0,
-      maximo: maximo,
-      plano: plano
-    }
-
-    console.log('📊 Limite do plano carregado:', limitePlan.value)
+    await carregarLimitePlano()
+    console.log('📊 Limite do plano carregado via composable:', limitePlano.value)
   } catch (error) {
     console.error('❌ Erro ao carregar limite do plano:', error)
   }
 }
 
-const carregarProcessos = async (searchTerm = '') => {
-  loading.value = true
+// Função mantida para compatibilidade, mas agora usa o composable
+const carregarProcessosLegacy = async (searchTerm = '') => {
   console.log('🔍 Carregando processos com termo:', searchTerm)
   
   try {
-    // Obter usuário autenticado
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      console.error('❌ Erro ao obter usuário autenticado:', authError)
-      throw new Error('Usuário não autenticado')
-    }
-
-    console.log('👤 Carregando processos para usuário:', user.id)
-
-    let query = supabase
-      .from('processos')
-      .select('*')
-      .eq('uuid', user.id) // FILTRO ESSENCIAL: apenas processos do usuário autenticado
-
-    // Se houver termo de busca, aplicar filtros de busca
+    const filtros = {}
     if (searchTerm && searchTerm.trim()) {
-      const termo = searchTerm.trim()
-      console.log('🔍 Aplicando filtro de busca para:', termo)
-      
-      // Usar sintaxe correta do Supabase para OR
-      query = query.or(`cnpj.ilike.%${termo}%,autor.ilike.%${termo}%,reu.ilike.%${termo}%,tribunal.ilike.%${termo}%,area.ilike.%${termo}%,assunto.ilike.%${termo}%,classe.ilike.%${termo}%,orgao_julgador.ilike.%${termo}%`)
-    } else {
-      console.log('🔍 Carregando todos os processos do usuário (sem filtro de texto)')
+      filtros.termo = searchTerm.trim()
     }
-
-    const { data, error } = await query
-      .order('created_at', { ascending: false })
-      .limit(1000) // Limitar para melhorar performance
-
-    if (error) {
-      console.error('❌ Erro na consulta principal:', error)
-      throw error
-    }
+    
+    await carregarProcessos(filtros)
+    console.log('📋 Processos carregados via composable:', processos.value.length)
 
     console.log('✅ Processos carregados:', data?.length || 0)
     processos.value = data || []
@@ -1236,13 +1172,13 @@ watch(() => props.searchTerm, (newSearchTerm) => {
   
   // Definir novo timeout para debounce
   searchTimeout = setTimeout(() => {
-    carregarProcessos(newSearchTerm)
+    carregarProcessos({ termo: newSearchTerm })
   }, 300)
 })
 
 onMounted(async () => {
   await carregarLimitePlano()
-  await carregarProcessos()
+  await carregarProcessos({ termo: props.searchTerm })
 })
 </script>
 
@@ -1816,4 +1752,4 @@ onMounted(async () => {
     gap: 0.125rem;
   }
 }
-</style> 
+</style>

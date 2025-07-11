@@ -53,9 +53,15 @@ onMounted(() => {
 
 onUnmounted(() => {
   // Limpar listener quando o componente for destruído
-  if (authListener) {
-    authListener.data.subscription.unsubscribe()
-    console.log('🧹 Listener de autenticação removido')
+  if (authListener && typeof authListener.data?.subscription?.unsubscribe === 'function') {
+    try {
+      authListener.data.subscription.unsubscribe()
+      console.log('🧹 Listener de autenticação removido')
+    } catch (error) {
+      console.warn('⚠️ Erro ao remover listener de autenticação:', error)
+    } finally {
+      authListener = null
+    }
   }
 })
 </script>
