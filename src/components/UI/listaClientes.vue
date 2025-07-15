@@ -597,15 +597,63 @@ const handleDropdownClose = (clienteId) => {
 
 .cliente-item.dropdown-open {
   position: relative;
+  z-index: 2000 !important;
+  background-color: #F9FAFB;
 }
 
-/* Estilos para o dropdown na versão desktop */
+/* Z-index escalonado para cada linha da lista - estratégia do marcar_agenda.vue */
+.cliente-item:nth-child(1) { z-index: 1100; }
+.cliente-item:nth-child(2) { z-index: 1099; }
+.cliente-item:nth-child(3) { z-index: 1098; }
+.cliente-item:nth-child(4) { z-index: 1097; }
+.cliente-item:nth-child(5) { z-index: 1096; }
+.cliente-item:nth-child(6) { z-index: 1095; }
+.cliente-item:nth-child(7) { z-index: 1094; }
+.cliente-item:nth-child(8) { z-index: 1093; }
+.cliente-item:nth-child(9) { z-index: 1092; }
+.cliente-item:nth-child(10) { z-index: 1091; }
+.cliente-item:nth-child(11) { z-index: 1090; }
+.cliente-item:nth-child(12) { z-index: 1089; }
+.cliente-item:nth-child(13) { z-index: 1088; }
+.cliente-item:nth-child(14) { z-index: 1087; }
+.cliente-item:nth-child(15) { z-index: 1086; }
+.cliente-item:nth-child(16) { z-index: 1085; }
+.cliente-item:nth-child(17) { z-index: 1084; }
+.cliente-item:nth-child(18) { z-index: 1083; }
+.cliente-item:nth-child(19) { z-index: 1082; }
+.cliente-item:nth-child(20) { z-index: 1081; }
+
+/* Quando dropdown está aberto, z-index ainda maior */
+.cliente-item.dropdown-open:nth-child(1) { z-index: 2100 !important; }
+.cliente-item.dropdown-open:nth-child(2) { z-index: 2099 !important; }
+.cliente-item.dropdown-open:nth-child(3) { z-index: 2098 !important; }
+.cliente-item.dropdown-open:nth-child(4) { z-index: 2097 !important; }
+.cliente-item.dropdown-open:nth-child(5) { z-index: 2096 !important; }
+.cliente-item.dropdown-open:nth-child(6) { z-index: 2095 !important; }
+.cliente-item.dropdown-open:nth-child(7) { z-index: 2094 !important; }
+.cliente-item.dropdown-open:nth-child(8) { z-index: 2093 !important; }
+.cliente-item.dropdown-open:nth-child(9) { z-index: 2092 !important; }
+.cliente-item.dropdown-open:nth-child(10) { z-index: 2091 !important; }
+.cliente-item.dropdown-open:nth-child(11) { z-index: 2090 !important; }
+.cliente-item.dropdown-open:nth-child(12) { z-index: 2089 !important; }
+.cliente-item.dropdown-open:nth-child(13) { z-index: 2088 !important; }
+.cliente-item.dropdown-open:nth-child(14) { z-index: 2087 !important; }
+.cliente-item.dropdown-open:nth-child(15) { z-index: 2086 !important; }
+.cliente-item.dropdown-open:nth-child(16) { z-index: 2085 !important; }
+.cliente-item.dropdown-open:nth-child(17) { z-index: 2084 !important; }
+.cliente-item.dropdown-open:nth-child(18) { z-index: 2083 !important; }
+.cliente-item.dropdown-open:nth-child(19) { z-index: 2082 !important; }
+.cliente-item.dropdown-open:nth-child(20) { z-index: 2081 !important; }
+
+/* Estilos para o dropdown na versão desktop - usando estratégia do marcar_agenda.vue */
 .desktop-only .processo-dropdown :deep(.dropdown-container) {
   position: relative;
+  z-index: 1005 !important;
 }
 
 .desktop-only .processo-dropdown :deep(.dropdown-options) {
   position: absolute;
+  z-index: 1015 !important;
 }
 
 @media (max-width: 1024px) {
@@ -744,10 +792,19 @@ const handleDropdownClose = (clienteId) => {
 .processo-dropdown :deep(.dropdown-container) {
   width: 100%;
   position: relative;
+  z-index: 1005 !important;
 }
 
 .processo-dropdown :deep(.dropdown-options) {
-  /* Sem z-index específico aqui */
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  z-index: 1015 !important;
+  background: white !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  border-radius: 6px !important;
+  border: 1px solid #E5E7EB !important;
 }
 
 .processo-dropdown :deep(.dropdown-selected) {
@@ -919,6 +976,23 @@ const handleDropdownClose = (clienteId) => {
   position: relative;
 }
 
+/* Garantir que dropdowns funcionem corretamente - estratégia do marcar_agenda.vue */
+.lista-clientes :deep(.dropdown-options) {
+  z-index: 1015 !important;
+}
+
+.lista-clientes :deep(.dropdown-container) {
+  z-index: 1005 !important;
+}
+
+.lista-clientes .processo-dropdown :deep(.dropdown-options) {
+  z-index: 1015 !important;
+  background: white !important;
+  border: 1px solid #0468FA !important;
+  border-top: none !important;
+  position: absolute !important;
+}
+
 /* Estilos para o layout mobile */
 .mobile-sort-button {
   display: none;
@@ -1024,12 +1098,42 @@ const handleDropdownClose = (clienteId) => {
     top: 100%;
     left: 0;
     width: 100%;
-    z-index: 1;
+    z-index: 1015 !important;
+    background: white !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+    border-radius: 6px !important;
+    border: 1px solid #E5E7EB !important;
   }
   
   /* Ajusta a altura do card quando o dropdown está aberto */
   .mobile-card-row.dropdown-open {
     margin-bottom: 250px;
+    position: relative;
+    z-index: 2000 !important;
   }
+  
+  /* Z-index escalonado para mobile cards */
+  .mobile-card:nth-child(1) { z-index: 1100; position: relative; }
+  .mobile-card:nth-child(2) { z-index: 1099; position: relative; }
+  .mobile-card:nth-child(3) { z-index: 1098; position: relative; }
+  .mobile-card:nth-child(4) { z-index: 1097; position: relative; }
+  .mobile-card:nth-child(5) { z-index: 1096; position: relative; }
+  .mobile-card:nth-child(6) { z-index: 1095; position: relative; }
+  .mobile-card:nth-child(7) { z-index: 1094; position: relative; }
+  .mobile-card:nth-child(8) { z-index: 1093; position: relative; }
+  .mobile-card:nth-child(9) { z-index: 1092; position: relative; }
+  .mobile-card:nth-child(10) { z-index: 1091; position: relative; }
+  
+  /* Z-index ainda maior quando dropdown está aberto */
+  .mobile-card:has(.mobile-card-row.dropdown-open):nth-child(1) { z-index: 2100 !important; }
+  .mobile-card:has(.mobile-card-row.dropdown-open):nth-child(2) { z-index: 2099 !important; }
+  .mobile-card:has(.mobile-card-row.dropdown-open):nth-child(3) { z-index: 2098 !important; }
+  .mobile-card:has(.mobile-card-row.dropdown-open):nth-child(4) { z-index: 2097 !important; }
+  .mobile-card:has(.mobile-card-row.dropdown-open):nth-child(5) { z-index: 2096 !important; }
+  .mobile-card:has(.mobile-card-row.dropdown-open):nth-child(6) { z-index: 2095 !important; }
+  .mobile-card:has(.mobile-card-row.dropdown-open):nth-child(7) { z-index: 2094 !important; }
+  .mobile-card:has(.mobile-card-row.dropdown-open):nth-child(8) { z-index: 2093 !important; }
+  .mobile-card:has(.mobile-card-row.dropdown-open):nth-child(9) { z-index: 2092 !important; }
+  .mobile-card:has(.mobile-card-row.dropdown-open):nth-child(10) { z-index: 2091 !important; }
 }
 </style>

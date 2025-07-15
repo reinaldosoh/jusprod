@@ -225,6 +225,7 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import Dropdown from '../../components/UI/Dropdown.vue'
 import Button from '../../components/UI/Button.vue'
+import { alertaService } from '../../services/alertaService.js'
 
 // Store de autenticação
 const authStore = useAuthStore()
@@ -950,6 +951,50 @@ const salvarForm = async () => {
     
     // Sucesso
     console.log(`${props.modo === 'editar' ? 'Atualização' : 'Salvamento'} concluído com sucesso!`)
+    
+    // Criar alertas automáticos (apenas para novos recebíveis, não para edições)
+    if (props.modo === 'criar') {
+      try {
+        console.log('💰 Criando alertas para o novo recebível...')
+        
+        // Buscar dados do cliente e processo para o alerta
+        const clienteData = clienteSelecionado.value
+        const processoData = processoSelecionado.value
+        
+        // Criar dados do recebível para o alerta
+        const recebivelDataCompleto = {
+          id: recebivelId,
+          descricao: descricao.value.trim(),
+          valor_total: valorNumerico.value,
+          data_lancamento: dataPrimeiroRecebimento.value,
+          quantidade_parcelas: quantidadeParcelas.value
+        }
+        
+        if (parcelamentoAtivo.value && dadosCompletos.parcelas.length > 0) {
+          // Criar alertas para cada parcela
+          await alertaService.criarAlertasParcelas(
+            recebivelDataCompleto,
+            dadosCompletos.parcelas,
+            { uuid: user.id, id: user.id },
+            clienteData,
+            processoData
+          )
+        } else {
+          // Criar alerta único para recebível não parcelado
+          await alertaService.criarAlertaRecebivel(
+            recebivelDataCompleto,
+            { uuid: user.id, id: user.id },
+            clienteData,
+            processoData
+          )
+        }
+        
+        console.log('✅ Alertas criados com sucesso para o recebível')
+      } catch (alertaError) {
+        console.error('❌ Erro ao criar alertas para recebível:', alertaError)
+        // Não bloquear o salvamento se houver erro no alerta
+      }
+    }
     
     // Emitir alerta de sucesso ANTES de fechar o formulário
     const mensagemSucesso = `Recebível ${props.modo === 'editar' ? 'atualizado' : 'salvo'} com sucesso!`

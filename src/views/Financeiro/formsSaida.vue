@@ -24,7 +24,7 @@
         <span class="toggle-label">Recorrência mensal</span>
         <div 
           class="toggle-container" 
-          @click="!modoVisualizacaoAtivo && toggleRecorrencia"
+          @click="toggleRecorrencia"
           :class="{ 'disabled': modoVisualizacaoAtivo }"
         >
           <div class="toggle-switch" :class="{ active: form.recorrencia_mensal, disabled: modoVisualizacaoAtivo }">
@@ -54,12 +54,15 @@
       <div class="data-label">
         <span class="label-text">Data de saída</span>
       </div>
-      <div class="input-container date-input-container">
+      <div 
+        class="input-container date-input-container"
+        @click="abrirCalendario"
+        :class="{ 'disabled': modoVisualizacaoAtivo }"
+      >
         <img 
           src="/images/calendarioMarcado.svg" 
           alt="Data" 
           class="input-icon" 
-          @click="!modoVisualizacaoAtivo && abrirCalendario"
           :class="{ 'disabled': modoVisualizacaoAtivo }"
         >
         <input 
@@ -68,6 +71,7 @@
           class="input-field date-input"
           ref="dateInput"
           :disabled="modoVisualizacaoAtivo"
+          @focus="abrirCalendario"
         >
       </div>
     </div>
@@ -269,6 +273,12 @@ const opcoesCategoria = computed(() => {
 
 // Métodos
 const toggleRecorrencia = () => {
+  if (modoVisualizacaoAtivo.value) {
+    console.log('⚠️ Toggle recorrência bloqueado - modo visualização ativo')
+    return
+  }
+  
+  console.log('🔄 Alterando recorrência mensal de', form.recorrencia_mensal, 'para', !form.recorrencia_mensal)
   form.recorrencia_mensal = !form.recorrencia_mensal
 }
 
@@ -293,13 +303,52 @@ const formatarValor = (event) => {
   }).format(valorNumericoCalculado)
 }
 
-const abrirCalendario = () => {
-  if (dateInput.value) {
-    try {
+const abrirCalendario = (event) => {
+  if (modoVisualizacaoAtivo.value) {
+    console.log('⚠️ Calendário bloqueado - modo visualização ativo')
+    return
+  }
+  
+  console.log('📅 Tentando abrir calendário...')
+  
+  // Prevenir propagação se necessário
+  if (event) {
+    event.stopPropagation()
+  }
+  
+  if (!dateInput.value) {
+    console.log('❌ Input de data não encontrado')
+    return
+  }
+
+  try {
+    // Primeiro tenta usar showPicker (método moderno)
+    if (typeof dateInput.value.showPicker === 'function') {
+      console.log('✅ Usando showPicker()')
       dateInput.value.showPicker()
-    } catch (error) {
+    } else {
+      throw new Error('showPicker não disponível')
+    }
+  } catch (error) {
+    console.log('⚠️ showPicker falhou, usando método alternativo:', error.message)
+    
+    // Método alternativo: foco + clique
+    try {
       dateInput.value.focus()
-      dateInput.value.click()
+      
+      // Aguarda um pouco e força o clique
+      setTimeout(() => {
+        if (dateInput.value) {
+          const event = new MouseEvent('click', {
+            view: window,
+            bubbles: true,
+            cancelable: true
+          })
+          dateInput.value.dispatchEvent(event)
+        }
+      }, 50)
+    } catch (fallbackError) {
+      console.log('❌ Método alternativo também falhou:', fallbackError.message)
     }
   }
 }
@@ -883,19 +932,45 @@ watch([() => props.dadosEdicao, () => props.modoVisualizacao], async (newValues,
 .date-input {
   color-scheme: light;
   position: relative;
+  cursor: pointer;
 }
 
 .date-input::-webkit-calendar-picker-indicator {
-  display: none;
+  opacity: 0;
+  position: absolute;
+  right: 12px;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  z-index: 3;
+}
+
+.date-input:disabled::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  cursor: not-allowed;
 }
 
 .date-input-container {
   position: relative;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.date-input-container.disabled {
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .date-input-container .input-icon {
   cursor: pointer;
-  z-index: 2;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.date-input-container .input-icon.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .dropdown-section {
@@ -1172,10 +1247,13 @@ watch([() => props.dadosEdicao, () => props.modoVisualizacao], async (newValues,
 
 .toggle-container {
   cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .toggle-container.disabled {
   cursor: not-allowed;
+  pointer-events: none;
 }
 
 .toggle-switch {
@@ -1187,8 +1265,16 @@ watch([() => props.dadosEdicao, () => props.modoVisualizacao], async (newValues,
   transition: background-color 0.3s ease;
 }
 
+.toggle-switch:hover:not(.disabled) {
+  background: #D1D5DB;
+}
+
 .toggle-switch.active {
   background: #0468FA;
+}
+
+.toggle-switch.active:hover:not(.disabled) {
+  background: #0354CC;
 }
 
 .toggle-switch.disabled {

@@ -27,6 +27,7 @@
         @carregar-relatorio="handleCarregarRelatorio"
         @relatorio-criado="handleRelatorioCriado"
         @erro="handleErroRelatorio"
+        @criar-relatorio-despesas-ativas="handleCriarRelatorioDespesasAtivas"
         ref="filtroRelatoriosRef"
       />
     </div>
@@ -109,6 +110,14 @@
       @excluir="handleRelatorioExcluido"
     />
 
+    <!-- Modal Relatório Despesas Ativas -->
+    <RelatorioDespesasAtivas
+      :is-visible="mostrarRelatorioDespesasAtivas"
+      @fechar="fecharRelatorioDespesasAtivas"
+      @relatorio-gerado="handleRelatorioGerado"
+      @erro="handleErroRelatorio"
+    />
+
     <!-- Alerta de Sucesso -->
     <AlertaSucesso 
       v-if="mostrarSucessoDocumento"
@@ -141,6 +150,7 @@ import VisualizadorFile from './visualizadorFile.vue'
 import RenomearArquivo from './renomearArquivo.vue'
 import MoverArquivoPasta from './mover_Arquivo_Pasta.vue'
 import ConfirmarExclusaoRelatorio from '../../components/UI/ConfirmarExclusaoRelatorio.vue'
+import RelatorioDespesasAtivas from './relatorio_despesasAtivas.vue'
 
 const searchTerm = ref('')
 const pastaSelecionada = ref({ tipo: 'sistema', id: 'modelos-relatorios', titulo: 'Modelos padrão' })
@@ -166,6 +176,8 @@ const mostrarModalMover = ref(false)
 const relatorioParaMover = ref(null)
 const mostrarModalExclusao = ref(false)
 const relatorioParaExcluir = ref(null)
+const mostrarRelatorioDespesasAtivas = ref(false)
+const relatorioGerado = ref(null)
 
 // Computed para mostrar relatórios padrão apenas quando pasta sistema estiver ativa
 const mostrarRelatoriosPadrao = computed(() => {
@@ -348,6 +360,11 @@ const handleErroRelatorio = (erro) => {
   
   mensagemErro.value = mensagemAmigavel
   mostrarAlertaErro.value = true
+}
+
+const handleCriarRelatorioDespesasAtivas = () => {
+  console.log('📊 Abrindo modal de Relatório de Despesas Ativas')
+  mostrarRelatorioDespesasAtivas.value = true
 }
 
 // Handlers para ações dos relatórios do cliente
@@ -613,6 +630,21 @@ const handleRelatorioExcluido = async () => {
   } catch (error) {
     console.error('Erro ao recarregar listas:', error)
   }
+}
+
+const fecharRelatorioDespesasAtivas = () => {
+  mostrarRelatorioDespesasAtivas.value = false
+  relatorioGerado.value = null
+}
+
+const handleRelatorioGerado = (relatorio) => {
+  console.log('✅ Relatório de Despesas Ativas gerado:', relatorio)
+  relatorioGerado.value = relatorio
+  fecharRelatorioDespesasAtivas()
+  
+  // Mostrar mensagem de sucesso
+  mensagemSucesso.value = 'Relatório de Despesas Ativas gerado com sucesso!'
+  mostrarSucessoDocumento.value = true
 }
 
 const fecharEditarPasta = () => {

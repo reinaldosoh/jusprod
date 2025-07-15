@@ -27,14 +27,17 @@
           </div>
         </div>
         <div class="flex items-center space-x-6">
-          <div class="relative">
+          <div class="relative" @click="navegarParaAlerta">
             <Bell class="text-gray-600 cursor-pointer w-5 h-5" />
-            <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              8
+            <span 
+              v-if="alertasNaoVisualizados > 0"
+              class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center"
+            >
+              {{ alertasNaoVisualizados }}
             </span>
           </div>
           <Controlador />
-          <div class="flex items-center border-l border-r px-4 py-2 cursor-pointer">
+          <div class="flex items-center border-l border-r px-4 py-2 cursor-pointer" @click="toggleUserDropdown" ref="userDropdownContainer">
             <div class="bg-gray-100 rounded-full h-8 w-8 flex items-center justify-center text-gray-700 mr-2">
               <span>{{ userInitials }}</span>
             </div>
@@ -42,7 +45,16 @@
               <span class="text-sm font-medium">{{ userName }}</span>
               <span class="text-xs text-gray-500">{{ userCompany }}</span>
             </div>
-            <ChevronDown class="ml-2 text-gray-400 w-4 h-4" />
+            <ChevronDown class="ml-2 w-4 h-4" :class="userDropdownVisible ? 'text-blue-600' : 'text-blue-custom'" />
+            
+            <!-- Dropdown do usuário -->
+            <div 
+              v-if="userDropdownVisible"
+              class="user-dropdown"
+              @click.stop
+            >
+              <CardDetalhes @abrir-cadastro-escritorio="abrirCadastroEscritorio" />
+            </div>
           </div>
           <div @click="abrirModalLogout" class="flex items-center text-blue-500 cursor-pointer">
             <LogOut class="mr-1 w-5 h-5" />
@@ -119,6 +131,14 @@
   :visible="modalLogoutVisivel" 
   @fechar="fecharModalLogout"
 />
+
+<!-- Modal de Cadastro de Escritório -->
+<CadastroEscritorio 
+  :isVisible="showCadastroEscritorio"
+  @fechar="fecharCadastroEscritorio"
+  @escritorio-salvo="handleEscritorioSalvo"
+  @erro="handleErro"
+/>
 </template>
 
 <script lang="ts" setup>
@@ -129,9 +149,12 @@ import Controlador from './Controlador.vue';
 import Logout from './Logout.vue';
 import HeaderMobile from './HeaderMobile.vue';
 import MenuFixoMobile from './MenuFixoMobile.vue';
+import CardDetalhes from './card_detalhes.vue';
+import CadastroEscritorio from '../../views/MeuPerfil/cadastro_escritorio.vue';
 import { useAuthStore } from '../../stores/auth';
 import { useUsuario } from '../../composables/useUsuario';
 import { useIntimacoes } from '../../composables/useIntimacoes';
+import { useAlertas } from '../../composables/useAlertas';
 import { eventBus, EVENTS } from '../../utils/eventBus';
 import { supabase } from '../../lib/supabase';
 
@@ -140,6 +163,7 @@ const route = useRoute();
 const authStore = useAuthStore();
 const { buscarDadosUsuario, nomeUsuario, iniciaisUsuario, dadosUsuario } = useUsuario();
 const { intimacoesNaoVisualizadas, buscarContadorIntimacoes, configurarListenerIntimacoes, removerListenerIntimacoes } = useIntimacoes();
+const { alertasNaoVisualizados, buscarContadorAlertas, configurarListenerAlertas, removerListenerAlertas } = useAlertas();
 
 // Detectar a rota atual para destacar o item de menu correto
 const currentPath = computed(() => route.path);
@@ -156,6 +180,13 @@ const modalLogoutVisivel = ref(false);
 
 // Estado para controlar a visibilidade do menu mobile
 const isMobileMenuVisible = ref(false);
+
+// Estado para controlar a visibilidade do dropdown do usuário
+const userDropdownVisible = ref(false);
+const userDropdownContainer = ref(null);
+
+// Estado para controlar a visibilidade do modal de cadastro de escritório
+const showCadastroEscritorio = ref(false);
 
 // Função para abrir o modal de logout
 const abrirModalLogout = () => {
@@ -192,6 +223,50 @@ const handleDeleteAccount = () => {
   console.log('Deletar conta solicitado');
 };
 
+// Função para navegar para a página de alertas
+const navegarParaAlerta = () => {
+  router.push('/alerta');
+};
+
+// Função para alternar a visibilidade do dropdown do usuário
+const toggleUserDropdown = (event) => {
+  event.stopPropagation();
+  userDropdownVisible.value = !userDropdownVisible.value;
+};
+
+// Função para fechar o dropdown do usuário quando clicar fora
+const handleClickOutside = (event) => {
+  if (userDropdownContainer.value && !userDropdownContainer.value.contains(event.target)) {
+    userDropdownVisible.value = false;
+  }
+};
+
+// Função para abrir o modal de cadastro de escritório
+const abrirCadastroEscritorio = () => {
+  // Fechar o dropdown do usuário
+  userDropdownVisible.value = false;
+  // Abrir o modal de cadastro
+  showCadastroEscritorio.value = true;
+};
+
+// Função para fechar o modal de cadastro de escritório
+const fecharCadastroEscritorio = () => {
+  showCadastroEscritorio.value = false;
+};
+
+// Função para lidar com o escritório salvo
+const handleEscritorioSalvo = (dados) => {
+  console.log('Escritório salvo:', dados);
+  // Aqui você pode adicionar lógica adicional, como mostrar uma mensagem de sucesso
+};
+
+// Função para lidar com erros
+const handleErro = (mensagem) => {
+  console.error('Erro:', mensagem);
+  // Aqui você pode mostrar a mensagem de erro para o usuário
+  alert(mensagem);
+};
+
 // Logout agora é gerenciado diretamente pelo componente Logout.vue
 
 // Removido handleUpgrade - agora é gerenciado pelo próprio componente Controlador
@@ -207,6 +282,7 @@ const logout = () => {
 
 // Estados para realtime updates
 let intimacoesSubscription = null;
+let alertasSubscription = null;
 
 // Função para inicializar dados do usuário e intimações
 const inicializarDados = async () => {
@@ -231,9 +307,17 @@ const inicializarDados = async () => {
     // Buscar contagem inicial de intimações não visualizadas
     await buscarContadorIntimacoes();
     
+    // Buscar contagem inicial de alertas não visualizados
+    await buscarContadorAlertas();
+    
     // Configurar listener para atualizações em tempo real apenas uma vez
     if (!intimacoesSubscription) {
       intimacoesSubscription = configurarListenerIntimacoes();
+    }
+    
+    // Configurar listener para alertas
+    if (!alertasSubscription) {
+      alertasSubscription = configurarListenerAlertas();
     }
     
     // Configurar listeners para eventos de processo
@@ -252,6 +336,9 @@ const inicializarDados = async () => {
 onMounted(async () => {
   // Inicializar dados imediatamente
   await inicializarDados();
+  
+  // Adicionar listener para clique fora do dropdown
+  document.addEventListener('click', handleClickOutside);
 });
 
 // Handlers para eventos de processo
@@ -259,6 +346,8 @@ const handleProcessoMonitorado = (data) => {
   console.log('📢 MenuFixo: Processo monitorado, atualizando contagens...', data);
   // Recarregar contagem de intimações pois pode ter novas intimações
   buscarContadorIntimacoes();
+  // Recarregar contagem de alertas pois pode ter novos alertas
+  buscarContadorAlertas();
 };
 
 const handleStatusAtualizado = (statusData) => {
@@ -272,9 +361,16 @@ onUnmounted(() => {
   removerListenerIntimacoes();
   intimacoesSubscription = null;
   
+  // Remover listener de alertas
+  removerListenerAlertas(alertasSubscription);
+  alertasSubscription = null;
+  
   // Remover listeners de eventos de processo
   eventBus.off(EVENTS.PROCESSO_MONITORADO, handleProcessoMonitorado);
   eventBus.off(EVENTS.STATUS_ATUALIZADO, handleStatusAtualizado);
+  
+  // Remover listener de clique fora do dropdown
+  document.removeEventListener('click', handleClickOutside);
 });
 
 const recentProcesses = ref([
@@ -648,5 +744,44 @@ input[type="number"] {
 .mx-2 {
   margin-left: 0.5rem;
   margin-right: 0.5rem;
+}
+
+/* Cor personalizada para a seta */
+.text-blue-custom {
+  color: #0468FA;
+}
+
+/* Dropdown do usuário */
+.user-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 1000;
+  margin-top: 8px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e5e7eb;
+}
+
+/* Posicionamento relativo para o container do dropdown */
+.flex.items-center.border-l.border-r.px-4.py-2.cursor-pointer {
+  position: relative;
+}
+
+/* Animação para o dropdown */
+.user-dropdown {
+  animation: dropdown-appear 0.2s ease-out;
+}
+
+@keyframes dropdown-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>

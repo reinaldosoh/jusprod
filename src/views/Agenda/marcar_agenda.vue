@@ -179,7 +179,7 @@
             </div>
 
             <!-- Lista de emails que receberão notificação -->
-            <div v-if="emailsCompletos.length > 0" class="emails-section" style="background-color: #fcfcfc; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+            <div v-if="emailsCompletos.length > 0" class="emails-section" style="background-color: #fcfcfc; padding: 12px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #e2e8f0;">
               <div style="font-weight: bold; color: #0468FA; font-size: 13px; margin-bottom: 8px;">E-mails que receberão notificação:</div>
               
               <div>
@@ -301,6 +301,7 @@ import Dropdown from '../../components/UI/Dropdown.vue'
 import AlertaSucesso from '../../components/UI/AlertaSucesso.vue'
 import AlertaErro from '../../components/UI/AlertaErro.vue'
 import { supabase } from '../../lib/supabase.js'
+import { alertaService } from '../../services/alertaService.js'
 
 const props = defineProps({
   show: {
@@ -852,6 +853,22 @@ const salvarAgenda = async () => {
       agendaData = insertData
 
       console.log('✅ Agenda criada no banco:', agendaData)
+      
+      // 4c. Criar alerta automático para nova agenda
+      try {
+        console.log('📅 Criando alerta para a nova agenda...')
+        
+        await alertaService.criarAlertaAgenda(
+          agendaData, 
+          { uuid: session.user.id, id: userData.id }, 
+          categoriaEscolhida
+        )
+        
+        console.log('✅ Alerta criado com sucesso para a agenda')
+      } catch (alertaError) {
+        console.error('❌ Erro ao criar alerta para agenda:', alertaError)
+        // Não bloquear o salvamento se houver erro no alerta
+      }
     }
 
     // 5. Emitir eventos antes de resetar campos

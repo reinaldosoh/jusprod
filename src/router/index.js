@@ -143,6 +143,24 @@ const routes = [
     component: () => import('../views/Ajuda/Ajuda.vue'),
     meta: { requiresAuth: true, requiresOnboarding: true }
   },
+  {
+    path: '/ajuda/enviar-email',
+    name: 'enviarEmail',
+    component: () => import('../views/Ajuda/enviar_email.vue'),
+    meta: { requiresAuth: true, requiresOnboarding: true }
+  },
+  {
+    path: '/alerta',
+    name: 'alerta',
+    component: () => import('../views/Alerta/Alerta.vue'),
+    meta: { requiresAuth: true, requiresOnboarding: true }
+  },
+  {
+    path: '/meu-perfil',
+    name: 'meuPerfil',
+    component: () => import('../views/MeuPerfil/MeuPerfil.vue'),
+    meta: { requiresAuth: true, requiresOnboarding: true }
+  },
   // Rota de fallback para páginas não encontradas
   {
     path: '/:pathMatch(.*)*',

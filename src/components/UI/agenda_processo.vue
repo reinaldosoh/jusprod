@@ -4,6 +4,7 @@ import Input from './Input.vue';
 import Button from './Button.vue';
 import Dropdown from './Dropdown.vue';
 import { supabase } from '../../lib/supabase';
+import { alertaService } from '../../services/alertaService.js';
 
 const props = defineProps({
   processoId: {
@@ -426,7 +427,23 @@ const criarAgenda = async () => {
 
     console.log('✅ Agenda criada no banco:', agendaData);
 
-    // 5. Preparar dados para o webhook N8N - um objeto para cada email
+    // 5. Criar alerta automático para a nova agenda
+    try {
+      console.log('📅 Criando alerta para a nova agenda do processo...')
+      
+      await alertaService.criarAlertaAgenda(
+        agendaData, 
+        { uuid: session.user.id, id: userData.id }, 
+        categoriaEscolhida
+      )
+      
+      console.log('✅ Alerta criado com sucesso para a agenda do processo')
+    } catch (alertaError) {
+      console.error('❌ Erro ao criar alerta para agenda:', alertaError)
+      // Não bloquear o salvamento se houver erro no alerta
+    }
+
+    // 6. Preparar dados para o webhook N8N - um objeto para cada email
     const baseData = {
       titulo: titulo.value.trim(),
       categoria: categoriaEscolhida?.nome || '',
@@ -496,7 +513,7 @@ const criarAgenda = async () => {
         }))
       : [{ ...baseData, cliente_email: userData.email || '', is_user_email: true }]; // Fallback se não tiver emails
 
-    // 6. Enviar para webhook N8N
+    // 7. Enviar para webhook N8N
     const webhookUrl = props.intimacao 
       ? 'https://n8nwebhook.estruturadeapi.com/webhook/19b16195-f5b9-422b-bc8c-5ce6ba55bd87'
       : 'https://n8nwebhook.estruturadeapi.com/webhook/285b2ce0-a61a-4cba-b813-6dcd62f4b1ac';
@@ -772,8 +789,8 @@ watch(() => props.show, async (newShow, oldShow) => {
               </div>
 
               <!-- Campo Categoria -->
-              <div class="field-wrapper category-field" style="position: relative; z-index: 1000;">
-                <div style="position: relative; z-index: 1000;">
+              <div class="field-wrapper category-field" style="position: relative; z-index: 1005;">
+                <div style="position: relative; z-index: 1005;">
                   <Dropdown
                     :options="categoriasDropdown"
                     @option-selected="onCategoriaSelected"
@@ -813,7 +830,7 @@ watch(() => props.show, async (newShow, oldShow) => {
             <!-- Horários -->
             <div class="time-row">
               <!-- Hora de início -->
-              <div class="field-wrapper">
+              <div class="field-wrapper" style="position: relative; z-index: 1004;">
                 <Dropdown 
                   :options="horasInicioOptions"
                   @option-selected="onHoraInicioSelected"
@@ -824,7 +841,7 @@ watch(() => props.show, async (newShow, oldShow) => {
               </div>
 
               <!-- Hora de fim -->
-              <div class="field-wrapper">
+              <div class="field-wrapper" style="position: relative; z-index: 1003;">
                 <Dropdown 
                   :options="horasFimOptions"
                   @option-selected="onHoraFimSelected"
@@ -838,7 +855,7 @@ watch(() => props.show, async (newShow, oldShow) => {
             <!-- Linha com Cliente e CNJ -->
             <div class="fields-row">
               <!-- Campo Cliente -->
-              <div class="field-wrapper">
+              <div class="field-wrapper" style="position: relative; z-index: 1002;">
                 <Dropdown 
                   :options="clientesOptions"
                   @option-selected="onClienteSelected"
@@ -849,13 +866,13 @@ watch(() => props.show, async (newShow, oldShow) => {
               </div>
 
               <!-- Campo CNJ fixo -->
-              <div class="field-wrapper">
+              <div class="field-wrapper" style="position: relative; z-index: 1001;">
                 <div class="input-with-icon">
                   <div class="input-icon">
                     <img src="/images/balanca.svg" alt="Processo" width="18" height="18" />
                   </div>
                   <Input
-                    :model-value="cnj"
+                    :model-value="props.cnj"
                     :disabled="true"
                     placeholder="CNJ"
                     class="input-with-padding"
@@ -865,25 +882,26 @@ watch(() => props.show, async (newShow, oldShow) => {
             </div>
 
             <!-- Lista de emails que receberão notificação -->
-            <div v-if="emailsCompletos.length > 0" class="emails-section">
-              <label class="emails-label">📧 E-mails que receberão notificação:</label>
-              <div class="emails-list">
-                <div v-for="(email, index) in emailsCompletos" :key="index" class="email-item">
-                  <!-- Ícone envelope.svg para emails -->
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M22 6L12 13L2 6" stroke="#6B7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                  <span class="email-text">{{ email }}</span>
-                  <span 
-                    class="email-badge"
-                    :class="{
-                      'badge-user': email === emailUsuario,
-                      'badge-client': email !== emailUsuario
-                    }"
-                  >
-                    {{ email === emailUsuario ? 'Você' : 'Cliente' }}
-                  </span>
+            <div v-if="emailsCompletos.length > 0" class="emails-section" style="background-color: #fcfcfc; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+              <div style="font-weight: bold; color: #0468FA; font-size: 13px; margin-bottom: 8px;">E-mails que receberão notificação:</div>
+              
+              <div>
+                <div v-for="(email, index) in emailsCompletos" :key="index" style="padding: 6px 0; display: flex; align-items: center;">
+                  <div style="font-size: 12px;">{{ email }}</div>
+                  <div style="margin-left: 8px;">
+                    <span 
+                      v-if="email === emailUsuario"
+                      style="display: inline-block; font-size: 10px; padding: 1px 4px; background-color: #e3efff; color: #0468FA; border-radius: 4px;"
+                    >
+                      Você
+                    </span>
+                    <span 
+                      v-else
+                      style="display: inline-block; font-size: 10px; padding: 1px 4px; background-color: #eaeaea; color: #666; border-radius: 4px;"
+                    >
+                      Cliente
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -980,9 +998,38 @@ watch(() => props.show, async (newShow, oldShow) => {
   z-index: 1000;
 }
 
-/* Garantir que dropdowns dentro do modal tenham z-index alto */
+/* Garantir que dropdowns dentro do modal tenham z-index alto - estratégia do marcar_agenda.vue */
 .modal-overlay .dropdown-with-icon :deep(.dropdown-options) {
-  z-index: 1002 !important;
+  z-index: 1010 !important;
+}
+
+.modal-overlay :deep(.dropdown-options) {
+  z-index: 1010 !important;
+}
+
+.modal-overlay :deep(.dropdown-container) {
+  z-index: 1005 !important;
+}
+
+/* Z-index específico para cada dropdown por ordem de prioridade */
+.field-wrapper[style*="z-index: 1005"] :deep(.dropdown-options) {
+  z-index: 1015 !important;
+}
+
+.field-wrapper[style*="z-index: 1004"] :deep(.dropdown-options) {
+  z-index: 1014 !important;
+}
+
+.field-wrapper[style*="z-index: 1003"] :deep(.dropdown-options) {
+  z-index: 1013 !important;
+}
+
+.field-wrapper[style*="z-index: 1002"] :deep(.dropdown-options) {
+  z-index: 1012 !important;
+}
+
+.field-wrapper[style*="z-index: 1001"] :deep(.dropdown-options) {
+  z-index: 1011 !important;
 }
 
 .modal-container {
@@ -1656,4 +1703,4 @@ watch(() => props.show, async (newShow, oldShow) => {
   color: #1e40af;
   border: 1px solid #93c5fd;
 }
-</style> 
+</style>

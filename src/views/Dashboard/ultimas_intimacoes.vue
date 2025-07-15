@@ -112,12 +112,17 @@ const formatarData = (dataString) => {
 
 // Função para navegar para lista de intimações filtrada por CNJ
 const verIntimacao = (cnj) => {
-  if (!cnj) return
+  if (!cnj) {
+    return
+  }
+  
+  // Garantir que caracteres especiais sejam tratados corretamente
+  const cnjLimpo = cnj.trim()
   
   // Navegar para lista de intimações com filtro por CNJ
   router.push({
     name: 'intimacoes',
-    query: { cnj: cnj }
+    query: { cnj: cnjLimpo }
   })
 }
 

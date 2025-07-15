@@ -37,21 +37,15 @@ const handleCancelar = () => {
 }
 
 const handleArquivar = async () => {
-  console.log('🚨🚨🚨 INÍCIO DA FUNÇÃO HANDLEARQUIVAR - PRIMEIRA LINHA!!! 🚨🚨🚨')
+  console.log('🚨 INÍCIO DA FUNÇÃO HANDLEARQUIVAR - APENAS WEBHOOK! 🚨')
   console.log('🔍 Debug - Props recebidas:', props)
   console.log('🔍 Debug - Processo:', props.processo)
   console.log('🔍 Debug - Session:', session)
   
-  // Validações mais rigorosas
+  // Validações básicas
   if (!props.processo) {
     console.error('❌ Processo não disponível:', props.processo)
     alert('Erro: Processo não encontrado')
-    return
-  }
-  
-  if (typeof props.processo !== 'object') {
-    console.error('❌ Processo não é um objeto:', typeof props.processo, props.processo)
-    alert('Erro: Dados do processo inválidos')
     return
   }
   
@@ -82,179 +76,85 @@ const handleArquivar = async () => {
   loading.value = true
   
   try {
-    console.log('🔄 Iniciando processo de arquivamento...')
-    console.log('📋 Processo:', props.processo)
-    console.log('🔑 Session:', session.value)
+    console.log('🔄 Iniciando chamada do webhook...')
+    console.log('📋 ID do processo:', props.processo.id)
+    console.log('📋 CNPJ do processo:', props.processo.cnpj)
+    console.log('👤 UUID do usuário:', session.value.user.id)
 
-    // 1. Verificar se existe outro registro com o mesmo CNPJ onde arquivado = false
-    const { data: outrosProcessos, error: checkError } = await supabase
-      .from('processos')
-      .select('id, arquivado, cnpj')
-      .eq('cnpj', props.processo.cnpj)
-      .eq('arquivado', false)
-      .neq('id', props.processo.id) // Excluir o processo atual
-      .eq('uuid', session.value.user.id)
-
-    if (checkError) {
-      console.error('❌ Erro ao verificar outros processos:', checkError)
-      throw new Error('Erro ao verificar processos relacionados')
+    // Obter JWT da sessão atual
+    const { data: { session: currentSession } } = await supabase.auth.getSession()
+    
+    if (!currentSession?.access_token) {
+      throw new Error('Usuário não autenticado')
     }
 
-    console.log('🔍 Outros processos com mesmo CNPJ (não arquivados):', outrosProcessos)
-
-    // 2. Verificar se precisa fazer chamada para webhook (ANTES de arquivar)
-    const temOutroProcessoAtivo = outrosProcessos && outrosProcessos.length > 0
+    console.log('🔑 JWT obtido:', currentSession.access_token.substring(0, 20) + '...')
     
-    console.log('🔍 Verificação de webhook:')
-    console.log('  - Outros processos ativos:', outrosProcessos)
-    console.log('  - Tem outro processo ativo?', temOutroProcessoAtivo)
+    // Fazer chamada para o webhook - APENAS ISSO!
+    console.log('🚀 Fazendo chamada do webhook...')
+    console.log('📤 Dados que serão enviados:', {
+      id: props.processo.id,
+      cnpj: props.processo.cnpj,
+      uuid: session.value.user.id,
+      url: 'https://n8nwebhook.estruturadeapi.com/webhook/6400ee63-8725-47d9-b8bc-545f949a0969'
+    })
     
-    if (!temOutroProcessoAtivo) {
-      console.log('🌐 Fazendo chamada para webhook - não há outros processos ativos com o mesmo CNPJ')
-      
-      // Buscar o monitoramento_id da tabela intimacoes relacionada ao processo
-      console.log('🔍 Buscando intimação para processo ID:', props.processo.id)
-      const { data: intimacao, error: intimacaoError } = await supabase
-        .from('intimacoes')
-        .select('monitoramento_id')
-        .eq('processo_id', props.processo.id)
-        .limit(1)
-        .single()
+    const response = await fetch('https://n8nwebhook.estruturadeapi.com/webhook/6400ee63-8725-47d9-b8bc-545f949a0969', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${currentSession.access_token}`
+      },
+      body: JSON.stringify({
+        id: props.processo.id,
+        cnpj: props.processo.cnpj,
+        uuid: session.value.user.id
+      })
+    })
 
-      console.log('📋 Resultado da busca de intimação:')
-      console.log('  - Intimação encontrada:', intimacao)
-      console.log('  - Erro na busca:', intimacaoError)
+    console.log('📨 Resposta do webhook:')
+    console.log('  - Status:', response.status)
+    console.log('  - Status Text:', response.statusText)
+    console.log('  - OK:', response.ok)
 
-      if (intimacaoError && intimacaoError.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('❌ Erro ao buscar intimação:', intimacaoError)
-        throw new Error('Erro ao buscar dados de monitoramento')
-      }
-
-      if (intimacao && intimacao.monitoramento_id) {
-        console.log('📨 Enviando para webhook - monitoramento_id:', intimacao.monitoramento_id)
-        
-        // 🔑 OBTER JWT IGUAL AO WHATSAPP SERVICE
-        const { data: { session: currentSession } } = await supabase.auth.getSession()
-        
-        if (!currentSession?.access_token) {
-          throw new Error('Usuário não autenticado')
-        }
-
-        console.log('🔑 JWT obtido:', currentSession.access_token.substring(0, 20) + '...')
-        
-        // Fazer chamada para o webhook
-        console.log('🚀 Iniciando chamada do webhook...')
-        console.log('📤 Dados que serão enviados:', {
-          monitoramento_id: intimacao.monitoramento_id,
-          url: 'https://n8nwebhook.estruturadeapi.com/webhook/7862ea7c-c748-4f1b-97c2-f02525526c1a'
-        })
-        
-        try {
-          const response = await fetch('https://n8nwebhook.estruturadeapi.com/webhook/7862ea7c-c748-4f1b-97c2-f02525526c1a', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-              'Authorization': `Bearer ${currentSession.access_token}`
-            },
-            body: JSON.stringify({
-              monitoramento_id: intimacao.monitoramento_id
-            })
-          })
-
-          console.log('📨 Resposta do webhook:')
-          console.log('  - Status:', response.status)
-          console.log('  - Status Text:', response.statusText)
-          console.log('  - OK:', response.ok)
-
-          if (!response.ok) {
-            console.error('❌ Erro na chamada do webhook:', response.status, response.statusText)
-            const errorText = await response.text()
-            console.error('❌ Resposta de erro:', errorText)
-            throw new Error(`Erro no webhook: ${response.status} - ${response.statusText}`)
-          } else {
-            console.log('✅ Webhook chamado com sucesso')
-            
-            // Tentar ler a resposta
-            try {
-              const responseData = await response.text()
-              console.log('📋 Resposta do webhook:', responseData)
-            } catch (readError) {
-              console.log('ℹ️ Não foi possível ler resposta do webhook')
-            }
-          }
-        } catch (webhookError) {
-          console.error('❌ Erro ao chamar webhook:', webhookError)
-          throw webhookError
-        }
-      } else {
-        console.log('⚠️ Nenhuma intimação encontrada ou sem monitoramento_id - CONTINUANDO SEM WEBHOOK')
-        console.log('  - Intimação:', intimacao)
-        console.log('  - Monitoramento ID:', intimacao?.monitoramento_id)
-      }
-      
-      // 🔄 Arquivar processo AQUI (depois do webhook quando necessário)
-      console.log('📦 Arquivando processo ID:', props.processo.id, '(caso COM webhook)')
-      
-      const { error: updateError1 } = await supabase
-        .from('processos')
-        .update({ arquivado: true })
-        .eq('id', props.processo.id)
-        .eq('uuid', session.value.user.id)
-
-      if (updateError1) {
-        console.error('❌ Erro ao arquivar processo:', updateError1)
-        throw new Error('Erro ao arquivar processo')
-      }
-
-      console.log('✅ Processo arquivado com sucesso (caso COM webhook)')
-      
-    } else {
-      console.log('ℹ️ Não chamando webhook - existem outros processos ativos com o mesmo CNPJ')
-      console.log('  - Quantidade de outros processos:', outrosProcessos?.length)
-      
-      // 🔄 Arquivar processo AQUI TAMBÉM (caso SEM webhook)
-      console.log('📦 Arquivando processo ID:', props.processo.id, '(caso SEM webhook)')
-      
-      const { error: updateError2 } = await supabase
-        .from('processos')
-        .update({ arquivado: true })
-        .eq('id', props.processo.id)
-        .eq('uuid', session.value.user.id)
-
-      if (updateError2) {
-        console.error('❌ Erro ao arquivar processo:', updateError2)
-        throw new Error('Erro ao arquivar processo')
-      }
-
-      console.log('✅ Processo arquivado com sucesso (caso SEM webhook)')
+    if (!response.ok) {
+      console.error('❌ Erro na chamada do webhook:', response.status, response.statusText)
+      const errorText = await response.text()
+      console.error('❌ Resposta de erro:', errorText)
+      throw new Error(`Erro no webhook: ${response.status} - ${response.statusText}`)
     }
 
-    // 4. Fechar modal PRIMEIRO - força fechamento
-    console.log('🔒 Fechando modal - modalVisible:', modalVisible.value)
+    console.log('✅ Webhook chamado com sucesso!')
+    
+    // Tentar ler a resposta
+    try {
+      const responseData = await response.text()
+      console.log('📋 Resposta do webhook:', responseData)
+    } catch (readError) {
+      console.log('ℹ️ Não foi possível ler resposta do webhook')
+    }
+
+    // Fechar modal
+    console.log('🔒 Fechando modal...')
     modalVisible.value = false
-    console.log('🔒 Modal fechado - modalVisible agora é:', modalVisible.value)
     
     // Aguardar animação de fechamento
-    console.log('⏳ Aguardando animação de fechamento (400ms)...')
     await new Promise(resolve => setTimeout(resolve, 400))
     
-    // Fechar completamente pelo pai
-    console.log('📢 Emitindo evento "arquivar" para o pai')
+    // Emitir evento para o pai
     emit('arquivar')
     
     // Aguardar mais um pouco
-    console.log('⏳ Aguardando mais um pouco (200ms)...')
     await new Promise(resolve => setTimeout(resolve, 200))
     
-    // AGORA mostrar sucesso
+    // Mostrar sucesso
     console.log('✅ Mostrando alerta de sucesso')
-    mensagemSucesso.value = 'Processo arquivado com sucesso!'
+    mensagemSucesso.value = 'Webhook chamado com sucesso!'
     showSucesso.value = true
-    console.log('🎯 showSucesso definido como true:', showSucesso.value)
 
   } catch (error) {
-    console.error('❌ Erro no processo de arquivamento:', error)
+    console.error('❌ Erro ao chamar webhook:', error)
     
     // Fechar modal primeiro mesmo em caso de erro
     emit('arquivar')

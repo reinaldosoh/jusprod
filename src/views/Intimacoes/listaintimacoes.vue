@@ -656,6 +656,17 @@ const carregarIntimacoes = async (searchTerm = '') => {
 
     console.log('✅ Intimações carregadas:', data?.length || 0)
     intimacoes.value = data || []
+    
+    // DEBUG: Se há termo de busca, mostrar resultados encontrados
+    if (termoAtual && termoAtual.trim() && data && data.length > 0) {
+      console.log('🔍 DEBUG: Resultados da busca para termo:', termoAtual)
+      data.forEach((intimacao, index) => {
+        const match = intimacao.cnj?.toLowerCase().includes(termoAtual.toLowerCase())
+        console.log(`${index + 1}. CNJ: "${intimacao.cnj}" | Match: ${match}`)
+      })
+    } else if (termoAtual && termoAtual.trim() && (!data || data.length === 0)) {
+      console.log('❌ Nenhum resultado encontrado para o termo:', termoAtual)
+    }
   } catch (error) {
     console.error('❌ Erro ao carregar intimações:', error)
     
@@ -1256,7 +1267,8 @@ watch(() => props.processoId, async (novoProcessoId, antigoProcessoId) => {
 })
 
 onMounted(async () => {
-  await carregarIntimacoes()
+  // Usar o searchTerm das props se estiver disponível (vindo da URL)
+  await carregarIntimacoes(props.searchTerm)
 })
 </script>
 

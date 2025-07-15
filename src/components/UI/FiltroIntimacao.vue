@@ -20,30 +20,8 @@
               @input="handleSearch"
               @keyup.enter="handleSearch"
             />
-            
-            <!-- Botão X para limpar (só aparece quando há texto) -->
-            <button 
-              v-if="searchTerm && searchTerm.trim()"
-              type="button"
-              class="clear-search-btn"
-              @click="clearSearch"
-              title="Limpar pesquisa"
-            >
-              ×
-            </button>
           </div>
         </div>
-
-        <!-- Botão Reset (só aparece quando há texto) -->
-        <button 
-          v-if="searchTerm && searchTerm.trim()"
-          type="button" 
-          class="reset-btn"
-          @click="handleReset"
-          title="Resetar filtros"
-        >
-          Reset
-        </button>
       </div>
     </div>
   </div>
@@ -61,7 +39,7 @@ const props = defineProps({
 })
 
 // Emits
-const emit = defineEmits(['search', 'reset'])
+const emit = defineEmits(['search'])
 
 // Estados
 const searchTerm = ref(props.initialSearchTerm || '')
@@ -79,17 +57,6 @@ const handleSearch = () => {
   const termo = searchTerm.value?.trim() || ''
   console.log('🔍 Emitindo busca:', termo)
   emit('search', termo)
-}
-
-const clearSearch = () => {
-  searchTerm.value = ''
-  emit('search', '')
-}
-
-const handleReset = () => {
-  console.log('🔄 Reset acionado')
-  searchTerm.value = ''
-  emit('reset')
 }
 </script>
 
@@ -136,7 +103,7 @@ const handleReset = () => {
 .search-input {
   width: 320px;
   height: 44px;
-  padding: 0 2.75rem 0 2.75rem;
+  padding: 0 1rem 0 2.75rem;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   font-size: 0.875rem;
@@ -183,56 +150,6 @@ const handleReset = () => {
   100% { transform: rotate(360deg); }
 }
 
-.clear-search-btn {
-  position: absolute;
-  right: 0.75rem;
-  width: 1.5rem;
-  height: 1.5rem;
-  background: #6b7280;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  line-height: 1;
-  z-index: 1;
-}
-
-.clear-search-btn:hover {
-  background: #374151;
-}
-
-.reset-btn {
-  height: 44px;
-  padding: 0 1.5rem;
-  background: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 80px;
-}
-
-.reset-btn:hover {
-  background: #e5e7eb;
-  border-color: #9ca3af;
-}
-
-.reset-btn:active {
-  background: #d1d5db;
-}
-
 /* Responsivo */
 @media (max-width: 768px) {
   .filtro-container {
@@ -258,10 +175,6 @@ const handleReset = () => {
   .search-input {
     width: 100%;
   }
-
-  .reset-btn {
-    width: 100%;
-  }
 }
 
 @media (max-width: 640px) {
@@ -274,11 +187,6 @@ const handleReset = () => {
   }
 
   .search-input {
-    height: 40px;
-    font-size: 0.8rem;
-  }
-
-  .reset-btn {
     height: 40px;
     font-size: 0.8rem;
   }

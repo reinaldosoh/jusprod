@@ -1,762 +1,386 @@
 import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
+import { supabase } from '@/lib/supabase'
 
-export const pdfService = {
-  /**
-   * Gera PDF do processo com layout formatado
-   * @param {Object} processo - Dados do processo
-   * @returns {Promise<void>} Download do PDF
-   */
-  async gerarPDFProcesso(processo) {
+export default {
+  async gerarRelatorioPDF(dados) {
     try {
-      // Criar novo documento PDF (A4)
-      const pdf = new jsPDF('portrait', 'mm', 'a4')
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
+      console.log('📄 Iniciando geração do relatório PDF...', dados)
       
-      // Cores do tema Jusprod
-      const cores = {
-        azulPrimario: [4, 104, 250], // #0468FA
-        azulSecundario: [59, 130, 246], // #3B82F6
-        cinzaTexto: [55, 65, 81], // #374151
-        cinzaClaro: [243, 244, 246], // #F3F4F6
-        branco: [255, 255, 255],
-        preto: [0, 0, 0]
-      }
+      // Buscar dados completos do banco
+      const dadosCompletos = await this.buscarDadosCompletos(dados)
       
-      // Carregar logotipo
-      const logoImg = await this.carregarImagem('/images/logotipo.png')
+      // Criar PDF
+      const pdf = new jsPDF('p', 'mm', 'a4')
       
-      // Carregar marca d'água
-      const marcaAguaImg = await this.carregarImagem('/images/marcadagua.png')
+      // Gerar conteúdo do PDF
+      await this.criarConteudoPDF(pdf, dadosCompletos)
       
-      // Adicionar marca d'água (fundo, transparente)
-      if (marcaAguaImg) {
-        pdf.addImage(marcaAguaImg, 'PNG', 30, 60, pageWidth - 60, pageHeight - 120, undefined, 'NONE', 0.08)
-      }
-      
-      // Header com fundo azul
-      pdf.setFillColor(...cores.azulPrimario)
-      pdf.rect(0, 0, pageWidth, 45, 'F')
-      
-      // Adicionar logotipo no header
-      if (logoImg) {
-        pdf.addImage(logoImg, 'PNG', 15, 12, 45, 20)
-      }
-      
-      // Título no header
-      pdf.setTextColor(...cores.branco)
-      pdf.setFontSize(22)
-      pdf.setFont('helvetica', 'bold')
-      pdf.text('RELATÓRIO DE PROCESSO', pageWidth - 15, 28, { align: 'right' })
-      
-      // Subtítulo no header
-      pdf.setFontSize(12)
-      pdf.setFont('helvetica', 'normal')
-      pdf.text('Sistema Jusprod', pageWidth - 15, 36, { align: 'right' })
-      
-      // Reset cor do texto
-      pdf.setTextColor(...cores.preto)
-      
-      let yPosition = 65
-      
-      // Card principal com informações do processo
-      pdf.setFillColor(...cores.cinzaClaro)
-      pdf.setDrawColor(...cores.azulPrimario)
-      pdf.setLineWidth(0.5)
-      pdf.roundedRect(15, yPosition - 5, pageWidth - 30, 40, 3, 3, 'FD')
-      
-      // Número do processo (destaque)
-      pdf.setFontSize(16)
-      pdf.setFont('helvetica', 'bold')
-      pdf.setTextColor(...cores.azulPrimario)
-      pdf.text(`PROCESSO: ${processo.cnpj || 'Não informado'}`, 20, yPosition + 8)
-      
-      // Tribunal (canto direito)
-      pdf.setFontSize(12)
-      pdf.setFont('helvetica', 'bold')
-      pdf.setTextColor(...cores.cinzaTexto)
-      const tribunal = processo.tribunal || 'Tribunal não informado'
-      pdf.text(tribunal, pageWidth - 20, yPosition + 8, { align: 'right' })
-      
-      // Data de geração
-      const dataAtual = new Date().toLocaleDateString('pt-BR')
-      pdf.setFontSize(10)
-      pdf.setFont('helvetica', 'normal')
-      pdf.text(`Gerado em: ${dataAtual}`, pageWidth - 20, yPosition + 18, { align: 'right' })
-      
-      yPosition += 55
-      
-      // Seção das partes
-      this.adicionarSecao(pdf, 'PARTES DO PROCESSO', yPosition, cores)
-      yPosition += 15
-      
-      // Autor e Réu em cards
-      const partesData = [
-        { label: 'AUTOR', valor: processo.autor || 'Não informado', icone: '👤' },
-        { label: 'RÉU', valor: processo.reu || 'Não informado', icone: '⚖️' }
-      ]
-      
-      partesData.forEach((parte, index) => {
-        this.adicionarCardInfo(pdf, parte.label, parte.valor, 20 + (index * 85), yPosition, 80, cores)
-      })
-      
-      yPosition += 35
-      
-      // Seção dos detalhes
-      this.adicionarSecao(pdf, 'DETALHES PROCESSUAIS', yPosition, cores)
-      yPosition += 15
-      
-      // Detalhes em grid 2x3
-      const detalhes = [
-        { label: 'ÁREA', valor: processo.area || 'Não informado' },
-        { label: 'CLASSE', valor: processo.classe || 'Não informado' },
-        { label: 'ASSUNTO', valor: processo.assunto || 'Não informado' },
-        { label: 'ÓRGÃO JULGADOR', valor: processo.orgao_julgador || 'Não informado' },
-        { label: 'VALOR DA CAUSA', valor: processo.valor_causa || 'Não informado' },
-        { label: 'STATUS', valor: processo.arquivado ? 'Não Monitorado' : 'Monitorado' }
-      ]
-      
-      // Grid 2 colunas
-      detalhes.forEach((detalhe, index) => {
-        const coluna = index % 2
-        const linha = Math.floor(index / 2)
-        const x = 20 + (coluna * 85)
-        const y = yPosition + (linha * 25)
-        
-        this.adicionarCardInfo(pdf, detalhe.label, detalhe.valor, x, y, 80, cores, 20)
-      })
-      
-      yPosition += (Math.ceil(detalhes.length / 2) * 25) + 20
-      
-      // Footer decorativo
-      const footerY = pageHeight - 25
-      pdf.setFillColor(...cores.azulPrimario)
-      pdf.rect(0, footerY - 5, pageWidth, 30, 'F')
-      
-      // Texto do footer
-      pdf.setTextColor(...cores.branco)
-      pdf.setFontSize(10)
-      pdf.setFont('helvetica', 'normal')
-      const dataHora = `${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`
-      pdf.text(`Relatório gerado em: ${dataHora}`, 15, footerY + 5)
-      
-      pdf.setFont('helvetica', 'bold')
-      pdf.text('JUSPROD', pageWidth - 15, footerY + 5, { align: 'right' })
-      pdf.setFont('helvetica', 'normal')
-      pdf.text('Sistema de Gestão Jurídica', pageWidth - 15, footerY + 12, { align: 'right' })
-      
-      // Fazer download do PDF
-      const nomeArquivo = `processo_${processo.cnpj?.replace(/[^\w]/g, '_') || 'sem_numero'}_${new Date().toISOString().split('T')[0]}.pdf`
+      // Fazer download
+      const nomeArquivo = `Relatorio_Despesas_Ativas_${new Date().toISOString().split('T')[0]}.pdf`
       pdf.save(nomeArquivo)
       
-    } catch (error) {
-      console.error('Erro ao gerar PDF:', error)
-      throw new Error('Erro ao gerar PDF do processo')
-    }
-  },
-
-  /**
-   * Adiciona uma seção com título estilizado
-   */
-  adicionarSecao(pdf, titulo, y, cores) {
-    // Fundo da seção
-    pdf.setFillColor(...cores.azulSecundario)
-    pdf.rect(15, y - 3, pdf.internal.pageSize.getWidth() - 30, 12, 'F')
-    
-    // Texto da seção
-    pdf.setTextColor(...cores.branco)
-    pdf.setFontSize(11)
-    pdf.setFont('helvetica', 'bold')
-    pdf.text(titulo, 20, y + 5)
-    
-    // Reset cor
-    pdf.setTextColor(...cores.preto)
-  },
-
-  /**
-   * Adiciona um card de informação estilizado
-   */
-  adicionarCardInfo(pdf, label, valor, x, y, width, cores, height = 25) {
-    // Card com borda
-    pdf.setFillColor(...cores.branco)
-    pdf.setDrawColor(...cores.cinzaClaro)
-    pdf.setLineWidth(0.5)
-    pdf.roundedRect(x, y, width, height, 2, 2, 'FD')
-    
-    // Label
-    pdf.setFontSize(8)
-    pdf.setFont('helvetica', 'bold')
-    pdf.setTextColor(...cores.azulPrimario)
-    pdf.text(label, x + 3, y + 6)
-    
-    // Valor (com quebra de texto se necessário)
-    pdf.setFontSize(9)
-    pdf.setFont('helvetica', 'normal')
-    pdf.setTextColor(...cores.cinzaTexto)
-    
-    const textoQuebrado = pdf.splitTextToSize(valor, width - 6)
-    const maxLinhas = Math.floor((height - 8) / 4)
-    const linhasParaMostrar = textoQuebrado.slice(0, maxLinhas)
-    
-    linhasParaMostrar.forEach((linha, index) => {
-      pdf.text(linha, x + 3, y + 12 + (index * 4))
-    })
-    
-    // Se o texto foi cortado, adicionar "..."
-    if (textoQuebrado.length > maxLinhas) {
-      pdf.text('...', x + width - 8, y + height - 3)
-    }
-  },
-  
-  /**
-   * Carrega imagem como base64 para uso no PDF
-   * @param {string} src - Caminho da imagem
-   * @returns {Promise<string>} Imagem em base64
-   */
-  carregarImagem(src) {
-    return new Promise((resolve, reject) => {
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-      
-      img.onload = () => {
-        // Criar canvas para converter para base64
-        const canvas = document.createElement('canvas')
-        const ctx = canvas.getContext('2d')
-        
-        canvas.width = img.width
-        canvas.height = img.height
-        
-        ctx.drawImage(img, 0, 0)
-        
-        try {
-          const dataURL = canvas.toDataURL('image/png')
-          resolve(dataURL)
-        } catch (error) {
-          console.warn(`Erro ao carregar imagem ${src}:`, error)
-          resolve(null)
-        }
-      }
-      
-      img.onerror = () => {
-        console.warn(`Erro ao carregar imagem ${src}`)
-        resolve(null) // Continuar sem a imagem
-      }
-      
-      img.src = src
-    })
-  },
-
-  /**
-   * Gera PDF da intimação com layout formatado
-   * @param {Object} intimacao - Dados da intimação
-   * @returns {Promise<void>} Download do PDF
-   */
-  async gerarPDFIntimacao(intimacao) {
-    try {
-      // Criar novo documento PDF (A4)
-      const pdf = new jsPDF('portrait', 'mm', 'a4')
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
-      
-      // Cores do tema Jusprod
-      const cores = {
-        azulPrimario: [4, 104, 250], // #0468FA
-        azulSecundario: [59, 130, 246], // #3B82F6
-        cinzaTexto: [55, 65, 81], // #374151
-        cinzaClaro: [243, 244, 246], // #F3F4F6
-        branco: [255, 255, 255],
-        preto: [0, 0, 0],
-        vermelhoIntimacao: [239, 68, 68] // #EF4444
-      }
-      
-      // Carregar logotipo
-      const logoImg = await this.carregarImagem('/images/logotipo.png')
-      
-      // Carregar marca d'água
-      const marcaAguaImg = await this.carregarImagem('/images/marcadagua.png')
-      
-      // Adicionar marca d'água (fundo, transparente)
-      if (marcaAguaImg) {
-        pdf.addImage(marcaAguaImg, 'PNG', 30, 60, pageWidth - 60, pageHeight - 120, undefined, 'NONE', 0.08)
-      }
-      
-      // Header com fundo azul
-      pdf.setFillColor(...cores.azulPrimario)
-      pdf.rect(0, 0, pageWidth, 45, 'F')
-      
-      // Adicionar logotipo no header
-      if (logoImg) {
-        pdf.addImage(logoImg, 'PNG', 15, 12, 45, 20)
-      }
-      
-      // Título no header
-      pdf.setTextColor(...cores.branco)
-      pdf.setFontSize(22)
-      pdf.setFont('helvetica', 'bold')
-      pdf.text('RELATÓRIO DE INTIMAÇÃO', pageWidth - 15, 28, { align: 'right' })
-      
-      // Subtítulo no header
-      pdf.setFontSize(12)
-      pdf.setFont('helvetica', 'normal')
-      pdf.text('Sistema Jusprod', pageWidth - 15, 36, { align: 'right' })
-      
-      // Reset cor do texto
-      pdf.setTextColor(...cores.preto)
-      
-      let yPosition = 65
-      
-      // Card principal com informações da intimação
-      pdf.setFillColor(...cores.cinzaClaro)
-      pdf.setDrawColor(...cores.vermelhoIntimacao)
-      pdf.setLineWidth(0.5)
-      pdf.roundedRect(15, yPosition - 5, pageWidth - 30, 50, 3, 3, 'FD')
-      
-      // Número CNJ (destaque)
-      pdf.setFontSize(16)
-      pdf.setFont('helvetica', 'bold')
-      pdf.setTextColor(...cores.azulPrimario)
-      pdf.text(`CNJ: ${intimacao.cnj || 'Não informado'}`, 20, yPosition + 8)
-      
-      // Status da intimação (canto direito)
-      pdf.setFontSize(12)
-      pdf.setFont('helvetica', 'bold')
-      const statusColor = intimacao.visualizado ? cores.azulPrimario : cores.vermelhoIntimacao
-      pdf.setTextColor(...statusColor)
-      const status = intimacao.visualizado ? 'VISUALIZADA' : 'NÃO VISUALIZADA'
-      pdf.text(status, pageWidth - 20, yPosition + 8, { align: 'right' })
-      
-      // Tribunal
-      pdf.setFontSize(11)
-      pdf.setFont('helvetica', 'bold')
-      pdf.setTextColor(...cores.cinzaTexto)
-      const tribunal = intimacao.tribunal || 'Tribunal não informado'
-      pdf.text(`Tribunal: ${tribunal}`, 20, yPosition + 20)
-      
-      // Tipo da intimação
-      const tipoIntimacao = intimacao.tipo || 'Tipo não informado'
-      pdf.text(`Tipo: ${tipoIntimacao}`, 20, yPosition + 30)
-      
-      // Data da intimação (canto direito)
-      const dataIntimacao = intimacao.data ? new Date(intimacao.data).toLocaleDateString('pt-BR') : 'Data não informada'
-      pdf.setFontSize(10)
-      pdf.setFont('helvetica', 'normal')
-      pdf.text(`Data: ${dataIntimacao}`, pageWidth - 20, yPosition + 20, { align: 'right' })
-      
-      // Data de geração
-      const dataAtual = new Date().toLocaleDateString('pt-BR')
-      pdf.text(`Gerado em: ${dataAtual}`, pageWidth - 20, yPosition + 30, { align: 'right' })
-      
-      yPosition += 65
-      
-      // Seção das partes
-      this.adicionarSecao(pdf, 'PARTES DO PROCESSO', yPosition, cores)
-      yPosition += 15
-      
-      // Autor e Réu em cards
-      const partesData = [
-        { label: 'AUTOR', valor: intimacao.autor || 'Não informado', icone: '👤' },
-        { label: 'RÉU', valor: intimacao.reu || 'Não informado', icone: '⚖️' }
-      ]
-      
-      partesData.forEach((parte, index) => {
-        this.adicionarCardInfo(pdf, parte.label, parte.valor, 20 + (index * 85), yPosition, 80, cores)
-      })
-      
-      yPosition += 35
-      
-      // Seção dos detalhes da intimação
-      this.adicionarSecao(pdf, 'DETALHES DA INTIMAÇÃO', yPosition, cores)
-      yPosition += 15
-      
-      // Detalhes em grid
-      const detalhes = [
-        { label: 'SEÇÃO', valor: intimacao.secao || 'Não informado' },
-        { label: 'STATUS', valor: intimacao.visualizado ? 'Visualizada' : 'Não Visualizada' },
-        { label: 'DATA CRIAÇÃO', valor: intimacao.created_at ? new Date(intimacao.created_at).toLocaleDateString('pt-BR') : 'Não informado' },
-        { label: 'LIDA', valor: intimacao.lido ? 'Sim' : 'Não' }
-      ]
-      
-      // Grid 2 colunas
-      detalhes.forEach((detalhe, index) => {
-        const coluna = index % 2
-        const linha = Math.floor(index / 2)
-        const x = 20 + (coluna * 85)
-        const y = yPosition + (linha * 25)
-        
-        this.adicionarCardInfo(pdf, detalhe.label, detalhe.valor, x, y, 80, cores, 20)
-      })
-      
-      yPosition += (Math.ceil(detalhes.length / 2) * 25) + 20
-      
-      // Seção do snippet (se existir)
-      if (intimacao.snippet && intimacao.snippet.trim()) {
-        this.adicionarSecao(pdf, 'RESUMO DA INTIMAÇÃO', yPosition, cores)
-        yPosition += 15
-        
-        // Card do snippet
-        const snippetHeight = Math.max(30, Math.min(50, Math.ceil(intimacao.snippet.length / 80) * 5))
-        pdf.setFillColor(...cores.branco)
-        pdf.setDrawColor(...cores.cinzaClaro)
-        pdf.setLineWidth(0.5)
-        pdf.roundedRect(15, yPosition, pageWidth - 30, snippetHeight, 2, 2, 'FD')
-        
-        // Texto do snippet
-        pdf.setFontSize(9)
-        pdf.setFont('helvetica', 'normal')
-        pdf.setTextColor(...cores.cinzaTexto)
-        
-        const snippetTexto = pdf.splitTextToSize(intimacao.snippet, pageWidth - 40)
-        const maxLinhasSnippet = Math.floor((snippetHeight - 8) / 4)
-        const linhasSnippet = snippetTexto.slice(0, maxLinhasSnippet)
-        
-        linhasSnippet.forEach((linha, index) => {
-          pdf.text(linha, 20, yPosition + 8 + (index * 4))
-        })
-        
-        if (snippetTexto.length > maxLinhasSnippet) {
-          pdf.text('...', pageWidth - 25, yPosition + snippetHeight - 3)
-        }
-        
-        yPosition += snippetHeight + 15
-      }
-      
-      // Seção do conteúdo - SEMPRE MOSTRAR
-      console.log('🔍 DEBUG - Verificando conteúdo da intimação:', intimacao.conteudo)
-      console.log('🔍 DEBUG - Snippet da intimação:', intimacao.snippet)
-      
-      // Verificar se há espaço suficiente na página
-      const espacoRestante = pageHeight - yPosition - 40 // 40 para footer
-      
-      // Se não há espaço, criar nova página
-      if (espacoRestante < 80) {
-        console.log('📄 DEBUG - Criando nova página para o conteúdo')
-        pdf.addPage()
-        yPosition = 30 // Reset da posição Y na nova página
-      }
-      
-      this.adicionarSecao(pdf, 'CONTEÚDO DA INTIMAÇÃO', yPosition, cores)
-      yPosition += 15
-      
-      // Card do conteúdo - usar todo o espaço disponível
-      const espacoDisponivel = pageHeight - yPosition - 40
-      const conteudoHeight = Math.max(60, Math.min(espacoDisponivel, 150))
-      
-      pdf.setFillColor(...cores.branco)
-      pdf.setDrawColor(...cores.cinzaClaro)
-      pdf.setLineWidth(0.5)
-      pdf.roundedRect(15, yPosition, pageWidth - 30, conteudoHeight, 2, 2, 'FD')
-      
-      // SEMPRE adicionar conteúdo - mesmo que seja só o snippet
-      let conteudoParaMostrar = intimacao.conteudo || intimacao.snippet || 'Conteúdo não disponível'
-      
-      console.log('📄 DEBUG - Conteúdo que será mostrado:', conteudoParaMostrar.substring(0, 200))
-      
-      // Processar conteúdo de forma SUPER SIMPLES
-      const conteudoLimpo = conteudoParaMostrar
-        .replace(/<[^>]*>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-      
-      console.log('📄 DEBUG - Conteúdo limpo:', conteudoLimpo.substring(0, 200))
-      
-      // Adicionar texto diretamente
-      pdf.setFont('helvetica', 'normal')
-      pdf.setFontSize(8)
-      pdf.setTextColor(...cores.cinzaTexto)
-      
-      const linhas = pdf.splitTextToSize(conteudoLimpo, pageWidth - 50)
-      const maxLinhas = Math.floor((conteudoHeight - 10) / 4)
-      
-      console.log('📄 DEBUG - Número de linhas:', linhas.length, 'Max linhas:', maxLinhas)
-      
-      for (let i = 0; i < Math.min(linhas.length, maxLinhas); i++) {
-        pdf.text(linhas[i], 20, yPosition + 10 + (i * 4))
-      }
-      
-      if (linhas.length > maxLinhas) {
-        pdf.text('... (conteúdo continua)', 20, yPosition + 10 + (maxLinhas * 4))
-      }
-      
-      console.log('✅ DEBUG - Conteúdo adicionado ao PDF!')
-      
-      yPosition += conteudoHeight + 15
-      
-      // Footer decorativo
-      const footerY = pageHeight - 25
-      pdf.setFillColor(...cores.azulPrimario)
-      pdf.rect(0, footerY - 5, pageWidth, 30, 'F')
-      
-      // Texto do footer
-      pdf.setTextColor(...cores.branco)
-      pdf.setFontSize(10)
-      pdf.setFont('helvetica', 'normal')
-      const dataHora = `${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`
-      pdf.text(`Relatório gerado em: ${dataHora}`, 15, footerY + 5)
-      
-      pdf.setFont('helvetica', 'bold')
-      pdf.text('JUSPROD', pageWidth - 15, footerY + 5, { align: 'right' })
-      pdf.setFont('helvetica', 'normal')
-      pdf.text('Sistema de Gestão Jurídica', pageWidth - 15, footerY + 12, { align: 'right' })
-      
-      // Fazer download do PDF
-      const cnj = intimacao.cnj?.replace(/[^\w]/g, '_') || 'sem_cnj'
-      const tipoArquivo = intimacao.tipo?.replace(/[^\w]/g, '_') || 'intimacao'
-      const data = new Date().toISOString().split('T')[0]
-      const nomeArquivo = `intimacao_${cnj}_${tipoArquivo}_${data}.pdf`
-      pdf.save(nomeArquivo)
+      console.log('✅ PDF gerado com sucesso!')
+      return { success: true, arquivo: nomeArquivo }
       
     } catch (error) {
-      console.error('Erro ao gerar PDF da intimação:', error)
-      throw new Error('Erro ao gerar PDF da intimação')
+      console.error('❌ Erro ao gerar PDF:', error)
+      throw error
     }
   },
 
-  /**
-   * Gera PDF da intimação e retorna como blob para upload (versão otimizada)
-   * @param {Object} intimacao - Dados da intimação
-   * @returns {Promise<{blob: Blob, nomeArquivo: string}>} PDF como blob e nome do arquivo
-   */
-  async gerarPDFIntimacaoParaUpload(intimacao) {
+  async buscarDadosCompletos(dados) {
     try {
-      // Criar novo documento PDF (A4) com compressão
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true // Ativar compressão
-      })
-      const pageWidth = pdf.internal.pageSize.getWidth()
-      const pageHeight = pdf.internal.pageSize.getHeight()
+      // Buscar dados do usuário autenticado
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
       
-      // Cores do tema Jusprod
-      const cores = {
-        azulPrimario: [4, 104, 250], // #0468FA
-        azulSecundario: [59, 130, 246], // #3B82F6
-        cinzaTexto: [55, 65, 81], // #374151
-        cinzaClaro: [243, 244, 246], // #F3F4F6
-        branco: [255, 255, 255],
-        preto: [0, 0, 0],
-        vermelhoIntimacao: [239, 68, 68] // #EF4444
+      if (authError || !user) {
+        throw new Error('Usuário não autenticado')
       }
-      
-      // VERSÃO OTIMIZADA - SEM IMAGENS PARA REDUZIR TAMANHO
-      console.log('📄 Gerando PDF otimizado sem imagens para reduzir tamanho...')
-      
-      // Header simples com fundo azul
-      pdf.setFillColor(...cores.azulPrimario)
-      pdf.rect(0, 0, pageWidth, 35, 'F')
-      
-      // Título no header (centralizado e menor)
-      pdf.setTextColor(...cores.branco)
-      pdf.setFontSize(16)
-      pdf.setFont('helvetica', 'bold')
-      pdf.text('RELATÓRIO DE INTIMAÇÃO', pageWidth / 2, 18, { align: 'center' })
-      
-      // Subtítulo no header (centralizado)
-      pdf.setFontSize(10)
-      pdf.setFont('helvetica', 'normal')
-      pdf.text('Sistema Jusprod', pageWidth / 2, 26, { align: 'center' })
-      
-      // Reset cor do texto
-      pdf.setTextColor(...cores.preto)
-      
-      let yPosition = 50 // Posição inicial menor devido ao header reduzido
-      
-      // Card principal com informações da intimação
-      pdf.setFillColor(...cores.cinzaClaro)
-      pdf.setDrawColor(...cores.vermelhoIntimacao)
-      pdf.setLineWidth(0.5)
-      pdf.roundedRect(15, yPosition - 5, pageWidth - 30, 50, 3, 3, 'FD')
-      
-      // Número CNJ (destaque)
-      pdf.setFontSize(16)
-      pdf.setFont('helvetica', 'bold')
-      pdf.setTextColor(...cores.azulPrimario)
-      pdf.text(`CNJ: ${intimacao.cnj || 'Não informado'}`, 20, yPosition + 8)
-      
-      // Status da intimação (canto direito)
-      pdf.setFontSize(12)
-      pdf.setFont('helvetica', 'bold')
-      const statusColor = intimacao.visualizado ? cores.azulPrimario : cores.vermelhoIntimacao
-      pdf.setTextColor(...statusColor)
-      const status = intimacao.visualizado ? 'VISUALIZADA' : 'NÃO VISUALIZADA'
-      pdf.text(status, pageWidth - 20, yPosition + 8, { align: 'right' })
-      
-      // Tribunal
-      pdf.setFontSize(11)
-      pdf.setFont('helvetica', 'bold')
-      pdf.setTextColor(...cores.cinzaTexto)
-      const tribunal = intimacao.tribunal || 'Tribunal não informado'
-      pdf.text(`Tribunal: ${tribunal}`, 20, yPosition + 20)
-      
-      // Tipo da intimação
-      const tipoIntimacao = intimacao.tipo || 'Tipo não informado'
-      pdf.text(`Tipo: ${tipoIntimacao}`, 20, yPosition + 30)
-      
-      // Data da intimação (canto direito)
-      const dataIntimacao = intimacao.data ? new Date(intimacao.data).toLocaleDateString('pt-BR') : 'Data não informada'
-      pdf.setFontSize(10)
-      pdf.setFont('helvetica', 'normal')
-      pdf.text(`Data: ${dataIntimacao}`, pageWidth - 20, yPosition + 20, { align: 'right' })
-      
-      // Data de geração
-      const dataAtual = new Date().toLocaleDateString('pt-BR')
-      pdf.text(`Gerado em: ${dataAtual}`, pageWidth - 20, yPosition + 30, { align: 'right' })
-      
-      yPosition += 65
-      
-      // Seção das partes
-      this.adicionarSecao(pdf, 'PARTES DO PROCESSO', yPosition, cores)
-      yPosition += 15
-      
-      // Autor e Réu em cards
-      const partesData = [
-        { label: 'AUTOR', valor: intimacao.autor || 'Não informado', icone: '👤' },
-        { label: 'RÉU', valor: intimacao.reu || 'Não informado', icone: '⚖️' }
-      ]
-      
-      partesData.forEach((parte, index) => {
-        this.adicionarCardInfo(pdf, parte.label, parte.valor, 20 + (index * 85), yPosition, 80, cores)
-      })
-      
-      yPosition += 35
-      
-      // Seção dos detalhes da intimação
-      this.adicionarSecao(pdf, 'DETALHES DA INTIMAÇÃO', yPosition, cores)
-      yPosition += 15
-      
-      // Detalhes em grid
-      const detalhes = [
-        { label: 'SEÇÃO', valor: intimacao.secao || 'Não informado' },
-        { label: 'STATUS', valor: intimacao.visualizado ? 'Visualizada' : 'Não Visualizada' },
-        { label: 'DATA CRIAÇÃO', valor: intimacao.created_at ? new Date(intimacao.created_at).toLocaleDateString('pt-BR') : 'Não informado' },
-        { label: 'TIPO', valor: intimacao.tipo || 'Não informado' }
-      ]
-      
-      // Grid 2 colunas
-      detalhes.forEach((detalhe, index) => {
-        const coluna = index % 2
-        const linha = Math.floor(index / 2)
-        const x = 20 + (coluna * 85)
-        const y = yPosition + (linha * 25)
-        
-        this.adicionarCardInfo(pdf, detalhe.label, detalhe.valor, x, y, 80, cores, 20)
-      })
-      
-      yPosition += (Math.ceil(detalhes.length / 2) * 25) + 20
-      
-      // Seção do snippet (se existir)
-      if (intimacao.snippet && intimacao.snippet.trim()) {
-        this.adicionarSecao(pdf, 'RESUMO DA INTIMAÇÃO', yPosition, cores)
-        yPosition += 15
-        
-        // Card do snippet
-        const snippetHeight = Math.max(30, Math.min(50, Math.ceil(intimacao.snippet.length / 80) * 5))
-        pdf.setFillColor(...cores.branco)
-        pdf.setDrawColor(...cores.cinzaClaro)
-        pdf.setLineWidth(0.5)
-        pdf.roundedRect(15, yPosition, pageWidth - 30, snippetHeight, 2, 2, 'FD')
-        
-        // Texto do snippet
-        pdf.setFontSize(9)
-        pdf.setFont('helvetica', 'normal')
-        pdf.setTextColor(...cores.cinzaTexto)
-        
-        const snippetTexto = pdf.splitTextToSize(intimacao.snippet, pageWidth - 40)
-        const maxLinhasSnippet = Math.floor((snippetHeight - 8) / 4)
-        const linhasSnippet = snippetTexto.slice(0, maxLinhasSnippet)
-        
-        linhasSnippet.forEach((linha, index) => {
-          pdf.text(linha, 20, yPosition + 8 + (index * 4))
-        })
-        
-        if (snippetTexto.length > maxLinhasSnippet) {
-          pdf.text('...', pageWidth - 25, yPosition + snippetHeight - 3)
-        }
-        
-        yPosition += snippetHeight + 15
-      }
-      
-      // Seção do conteúdo (se necessário criar nova página)
-      const espacoRestante = pageHeight - yPosition - 40
-      if (espacoRestante < 80) {
-        pdf.addPage()
-        yPosition = 30
-      }
-      
-      this.adicionarSecao(pdf, 'CONTEÚDO DA INTIMAÇÃO', yPosition, cores)
-      yPosition += 15
-      
-      // Card do conteúdo
-      const espacoDisponivel = pageHeight - yPosition - 40
-      const conteudoHeight = Math.max(60, Math.min(espacoDisponivel, 150))
-      
-      pdf.setFillColor(...cores.branco)
-      pdf.setDrawColor(...cores.cinzaClaro)
-      pdf.setLineWidth(0.5)
-      pdf.roundedRect(15, yPosition, pageWidth - 30, conteudoHeight, 2, 2, 'FD')
-      
-      // Processar conteúdo (versão otimizada - limitada para reduzir tamanho)
-      let conteudoParaMostrar = intimacao.conteudo || intimacao.snippet || 'Conteúdo não disponível'
-      const conteudoLimpo = conteudoParaMostrar
-        .replace(/<[^>]*>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .substring(0, 2000) // LIMITE DE 2000 caracteres para reduzir tamanho
-      
-      // Adicionar texto
-      pdf.setFont('helvetica', 'normal')
-      pdf.setFontSize(8)
-      pdf.setTextColor(...cores.cinzaTexto)
-      
-      const linhas = pdf.splitTextToSize(conteudoLimpo, pageWidth - 50)
-      const maxLinhas = Math.floor((conteudoHeight - 10) / 4)
-      
-      for (let i = 0; i < Math.min(linhas.length, maxLinhas); i++) {
-        pdf.text(linhas[i], 20, yPosition + 10 + (i * 4))
-      }
-      
-      if (conteudoParaMostrar.length > 2000 || linhas.length > maxLinhas) {
-        pdf.text('... (conteúdo truncado para otimização)', 20, yPosition + 10 + (maxLinhas * 4))
-      }
-      
-      yPosition += conteudoHeight + 15
-      
-      // Footer decorativo
-      const footerY = pageHeight - 25
-      pdf.setFillColor(...cores.azulPrimario)
-      pdf.rect(0, footerY - 5, pageWidth, 30, 'F')
-      
-      // Texto do footer
-      pdf.setTextColor(...cores.branco)
-      pdf.setFontSize(10)
-      pdf.setFont('helvetica', 'normal')
-      const dataHora = `${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`
-      pdf.text(`Relatório gerado em: ${dataHora}`, 15, footerY + 5)
-      
-      pdf.setFont('helvetica', 'bold')
-      pdf.text('JUSPROD', pageWidth - 15, footerY + 5, { align: 'right' })
-      pdf.setFont('helvetica', 'normal')
-      pdf.text('Sistema de Gestão Jurídica', pageWidth - 15, footerY + 12, { align: 'right' })
-      
-      // Gerar nome do arquivo
-      const cnj = intimacao.cnj?.replace(/[^\w]/g, '_') || 'sem_cnj'
-      const tipoArquivo = intimacao.tipo?.replace(/[^\w]/g, '_') || 'intimacao'
-      const data = new Date().toISOString().split('T')[0]
-      const nomeArquivo = `intimacao_${cnj}_${tipoArquivo}_${data}.pdf`
-      
-      // Retornar PDF como blob
-      const pdfBlob = pdf.output('blob')
-      
+
+      console.log('🔍 Buscando dados completos para o usuário:', user.id)
+
+      // Buscar dados do usuário
+      const { data: usuario, error: userError } = await supabase
+        .from('usuario')
+        .select('*')
+        .eq('uuid', user.id)
+        .single()
+
+      // Buscar dados do escritório
+      const { data: escritorio, error: officeError } = await supabase
+        .from('escritorio')
+        .select('*')
+        .eq('uuid', user.id)
+        .single()
+
+      // Buscar dados do cliente selecionado
+      const cliente = await this.buscarDadosCliente(dados.clienteSelecionado?.id)
+
+      // Buscar processos detalhados com informações completas
+      const processosDetalhados = await this.buscarProcessosDetalhados(dados.processosParaRelatorio, user.id)
+
       return {
-        blob: pdfBlob,
-        nomeArquivo: nomeArquivo
+        ...dados,
+        usuario: usuario || { nome: 'Usuário não encontrado', email: user.email },
+        escritorio: escritorio || { nome_escritorio: 'Escritório não cadastrado' },
+        cliente: cliente,
+        processosDetalhados
+      }
+    } catch (error) {
+      console.error('Erro ao buscar dados completos:', error)
+      throw error
+    }
+  },
+
+  async buscarDadosCliente(clienteId) {
+    if (!clienteId) return null
+    
+    try {
+      const { data, error } = await supabase
+        .from('clientes')
+        .select('*')
+        .eq('id', clienteId)
+        .single()
+
+      if (error) {
+        console.warn('Erro ao buscar cliente:', error)
+        return null
+      }
+
+      return data
+    } catch (error) {
+      console.error('Erro ao buscar dados do cliente:', error)
+      return null
+    }
+  },
+
+  async buscarProcessosDetalhados(processos, userId) {
+    try {
+      const processosDetalhados = []
+      
+      for (const processo of processos) {
+        if (processo.id && processo.id !== 'todos') {
+          // Buscar dados completos do processo
+          const { data: processoDb, error } = await supabase
+            .from('processos')
+            .select('*')
+            .eq('id', processo.id)
+            .eq('uuid', userId)
+            .single()
+          
+          if (error) {
+            console.warn('Erro ao buscar processo:', error)
+            processosDetalhados.push(processo)
+            continue
+          }
+
+          // Buscar último andamento
+          const { data: ultimoAndamento } = await supabase
+            .from('intimacoes')
+            .select('data_intimacao, assunto, conteudo')
+            .eq('processo_id', processo.id)
+            .eq('uuid', userId)
+            .order('data_intimacao', { ascending: false })
+            .limit(1)
+            .single()
+          
+          processosDetalhados.push({
+            ...processo,
+            ...processoDb,
+            ultimoAndamento: ultimoAndamento || null
+          })
+        } else {
+          processosDetalhados.push(processo)
+        }
       }
       
+      return processosDetalhados
     } catch (error) {
-      console.error('Erro ao gerar PDF da intimação para upload:', error)
-      throw new Error('Erro ao gerar PDF da intimação')
+      console.error('Erro ao buscar processos detalhados:', error)
+      return processos
     }
-  }
+  },
 
+  async criarConteudoPDF(pdf, dados) {
+    const pageWidth = pdf.internal.pageSize.width
+    const pageHeight = pdf.internal.pageSize.height
+    
+    let yPosition = 20
+    
+    // 1. LOGO E TÍTULO
+    yPosition = this.criarCabecalho(pdf, yPosition, pageWidth, dados)
+    
+    // 2. INFORMAÇÕES GERAIS
+    yPosition = this.criarInformacoes(pdf, yPosition, pageWidth, dados)
+    
+    // 3. TABELA PRINCIPAL
+    yPosition = this.criarTabelaPrincipal(pdf, yPosition, pageWidth, dados)
+    
+    // 4. SEÇÃO DE PROGNÓSTICO
+    yPosition = this.criarPrognostico(pdf, yPosition, pageWidth, dados)
+    
+    // 5. RODAPÉ
+    this.criarRodape(pdf, pageHeight, pageWidth, dados)
+  },
+
+  criarCabecalho(pdf, y, pageWidth, dados) {
+    // Logo Jusprod no topo esquerdo
+    pdf.setFontSize(24)
+    pdf.setTextColor(70, 130, 180)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('Jusprod', 20, y)
+    
+    // Retângulo azul pequeno ao lado do logo
+    pdf.setFillColor(70, 130, 180)
+    pdf.rect(16, y - 6, 4, 8, 'F')
+    
+    y += 25
+    
+    // Título principal
+    pdf.setFontSize(14)
+    pdf.setTextColor(54, 117, 196)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('Relatório de andamento processual tributário auditoria - Demandas ativas', 20, y)
+    
+    return y + 15
+  },
+
+  criarInformacoes(pdf, y, pageWidth, dados) {
+    // Título "Todos os processos"
+    pdf.setFontSize(12)
+    pdf.setTextColor(0, 0, 0)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('Todos os processos', 20, y)
+    
+    y += 10
+    
+    // Cliente
+    pdf.setFontSize(10)
+    pdf.setFont('helvetica', 'normal')
+    pdf.text('Cliente: ', 20, y)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text(dados.cliente?.nome || 'Kirchner panquecas', 37, y)
+    
+    y += 8
+    
+    // Período
+    pdf.setFont('helvetica', 'normal')
+    pdf.text('Período: ', 20, y)
+    pdf.setFont('helvetica', 'bold')
+    const hoje = new Date()
+    const periodoInicio = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1)
+    const periodoFim = hoje
+    pdf.text(`${periodoInicio.toLocaleDateString('pt-BR')} até ${periodoFim.toLocaleDateString('pt-BR')}`, 44, y)
+    
+    return y + 15
+  },
+
+  criarTabelaPrincipal(pdf, y, pageWidth, dados) {
+    // Dados da tabela baseados na referência
+    const cabecalho = [
+      'Escritório responsável',
+      'Número do processo',
+      'Vara/Comarca',
+      'Natureza/Objeto da causa',
+      'RÉ (U)',
+      'Valor envolvido'
+    ]
+    
+    const linhas = []
+    
+    // Processar dados reais ou usar dados de exemplo
+    if (dados.processosDetalhados && dados.processosDetalhados.length > 0) {
+      dados.processosDetalhados.forEach(processo => {
+        linhas.push([
+          dados.escritorio?.nome_escritorio || 'Paio Neto e Moraes Paul - Advogados',
+          processo.cnpj || processo.numeroProcesso || '334567000 189981821234',
+          processo.vara || 'Vara/comarca',
+          processo.natureza || 'Natureza',
+          processo.reu || 'Coca-Cola',
+          processo.valor_causa ? 
+            `R$ ${processo.valor_causa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 
+            'R$ 457.124,00'
+        ])
+      })
+    } else {
+      // Dados de exemplo baseados na referência
+      linhas.push([
+        dados.escritorio?.nome_escritorio || 'Paio Neto e Moraes Paul - Advogados',
+        '334567000 189981821234',
+        'Vara/comarca',
+        'Natureza',
+        'Coca-Cola',
+        'R$ 457.124,00'
+      ])
+    }
+    
+    // Criar tabela
+    autoTable(pdf, {
+      startY: y,
+      head: [cabecalho],
+      body: linhas,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [245, 245, 245],
+        textColor: [0, 0, 0],
+        fontSize: 9,
+        fontStyle: 'bold',
+        halign: 'center',
+        valign: 'middle'
+      },
+      bodyStyles: {
+        fontSize: 9,
+        textColor: [0, 0, 0],
+        halign: 'center',
+        valign: 'middle'
+      },
+      columnStyles: {
+        0: { cellWidth: 35 },
+        1: { cellWidth: 35 },
+        2: { cellWidth: 25 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 20 },
+        5: { cellWidth: 30 }
+      },
+      margin: { left: 20, right: 20 },
+      tableLineColor: [200, 200, 200],
+      tableLineWidth: 0.5
+    })
+    
+    return pdf.lastAutoTable.finalY + 20
+  },
+
+  criarPrognostico(pdf, y, pageWidth, dados) {
+    // Verificar se há dados de prognóstico
+    let prognosticoData = { provavel: 'R$ 100.000,00', possivel: 'R$ 150.000,00', remota: 'R$ 170.000,00', total: 'R$ 0,00' }
+    
+    if (dados.processosDetalhados && dados.processosDetalhados.length > 0) {
+      const processo = dados.processosDetalhados[0]
+      if (processo.prognostico) {
+        prognosticoData = processo.prognostico
+      }
+    }
+    
+    // Criar tabela de prognóstico
+    const linhas = [
+      ['Provável', prognosticoData.provavel || 'R$ 100.000,00'],
+      ['Possível', prognosticoData.possivel || 'R$ 150.000,00'],
+      ['Remota', prognosticoData.remota || 'R$ 170.000,00'],
+      ['Total', prognosticoData.total || 'R$ 0,00']
+    ]
+    
+    autoTable(pdf, {
+      startY: y,
+      body: linhas,
+      theme: 'grid',
+      bodyStyles: {
+        fontSize: 10,
+        textColor: [0, 0, 0],
+        halign: 'center',
+        valign: 'middle'
+      },
+      columnStyles: {
+        0: { 
+          cellWidth: 40, 
+          fillColor: [245, 245, 245], 
+          fontStyle: 'bold' 
+        },
+        1: { cellWidth: 40 }
+      },
+      margin: { left: 20, right: 20 },
+      tableLineColor: [200, 200, 200],
+      tableLineWidth: 0.5
+    })
+    
+    return pdf.lastAutoTable.finalY + 20
+  },
+
+  criarRodape(pdf, pageHeight, pageWidth, dados) {
+    const y = pageHeight - 50
+    
+    // Primeira linha do rodapé
+    pdf.setFontSize(9)
+    pdf.setTextColor(0, 0, 0)
+    pdf.setFont('helvetica', 'normal')
+    
+    // Observação com PIX
+    pdf.text('Observação: ', 20, y)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('PIX: 12.345.567/0001/23', 45, y)
+    
+    // Segunda linha - Emitido por
+    pdf.setFont('helvetica', 'normal')
+    pdf.text('Emitido por: ', 20, y + 8)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text(`${dados.usuario?.nome || 'Vini Paio Neto'} - OAB 230123SP`, 48, y + 8)
+    
+    // Terceira linha - Elaborado em
+    pdf.setFont('helvetica', 'normal')
+    pdf.text('Elaborado em: ', 20, y + 16)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('jusprod.com.br', 55, y + 16)
+    
+    // Quarta linha - Data emissão
+    pdf.setFont('helvetica', 'normal')
+    pdf.text('Data emissão: ', 20, y + 24)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text(new Date().toLocaleDateString('pt-BR'), 55, y + 24)
+    
+    // Quinta linha - Páginas
+    pdf.setFont('helvetica', 'normal')
+    pdf.text('Páginas: ', 20, y + 32)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text(`${pdf.internal.getNumberOfPages()} de ${pdf.internal.getNumberOfPages()}`, 40, y + 32)
+    
+    // Logo Jusprod no canto direito
+    pdf.setFontSize(12)
+    pdf.setTextColor(70, 130, 180)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('Jusprod', pageWidth - 35, y + 20)
+    
+    // Retângulo azul pequeno ao lado do logo
+    pdf.setFillColor(70, 130, 180)
+    pdf.rect(pageWidth - 39, y + 16, 3, 6, 'F')
+  }
 } 

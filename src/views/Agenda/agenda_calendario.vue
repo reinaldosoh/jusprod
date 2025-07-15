@@ -186,7 +186,13 @@
         left: tooltip.x + 'px' 
       }"
     >
-      <div class="tooltip-content">
+      <div 
+        class="tooltip-content" 
+        :style="{ 
+          backgroundColor: tooltip.cor,
+          boxShadow: `0 10px 25px ${tooltip.cor}40` // Adiciona transparência à sombra
+        }"
+      >
         <div class="tooltip-title">{{ tooltip.titulo }}</div>
         <div class="tooltip-info">
           <span class="tooltip-label">Horário:</span>
@@ -200,6 +206,15 @@
           <span class="tooltip-label">Cliente:</span>
           <span class="tooltip-value">{{ tooltip.cliente }}</span>
         </div>
+        <!-- Seta do tooltip com cor dinâmica -->
+        <div 
+          class="tooltip-arrow"
+          :class="{ 'tooltip-arrow-below': tooltip.isBelow }"
+          :style="{ 
+            borderTopColor: tooltip.isBelow ? 'transparent' : tooltip.cor,
+            borderBottomColor: tooltip.isBelow ? tooltip.cor : 'transparent'
+          }"
+        ></div>
       </div>
     </div>
   </div>
@@ -242,6 +257,7 @@ const tooltip = ref({
   horario: '',
   categoria: '',
   cliente: '',
+  cor: '#0468FA', // Adicionar cor da categoria
   isBelow: false
 })
 
@@ -604,6 +620,7 @@ const showTooltip = (compromisso, event) => {
     horario: `${formatarHora(compromisso.inicio)} às ${formatarHora(compromisso.fim)}`,
     categoria: compromisso.categoria_nome || 'Sem categoria',
     cliente: compromisso.cliente_nome || '',
+    cor: compromisso.categoria_cor || '#0468FA', // Usar cor da categoria do compromisso
     isBelow: isBelow
   }
 }
@@ -1007,11 +1024,10 @@ defineExpose({
 }
 
 .tooltip-content {
-  background: #0468FA;
+  /* Background e box-shadow agora são aplicados via :style no template */
   color: white;
   padding: 12px 16px;
   border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(4, 104, 250, 0.25);
   font-family: 'Inter', sans-serif;
   font-size: 13px;
   line-height: 1.4;
@@ -1019,20 +1035,35 @@ defineExpose({
   position: relative;
 }
 
+/* Remover setas CSS antigas - agora usamos a div .tooltip-arrow */
 .tooltip-content::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: #0468FA;
+  display: none;
 }
 
 .tooltip-below .tooltip-content::after {
+  display: none;
+}
+
+/* Nova seta dinâmica */
+.tooltip-arrow {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+}
+
+/* Seta normal (tooltip acima do elemento) */
+.tooltip-arrow:not(.tooltip-arrow-below) {
+  top: 100%;
+  border-bottom: none;
+}
+
+/* Seta quando tooltip está abaixo do elemento */
+.tooltip-arrow-below {
   top: -12px;
-  border-top-color: transparent;
-  border-bottom-color: #0468FA;
+  border-top: none;
 }
 
 .tooltip-title {

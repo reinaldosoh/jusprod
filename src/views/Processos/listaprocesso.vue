@@ -466,15 +466,52 @@ const modalLembreteProcesso = ref({ show: false, processoId: null, cnj: '' }) //
 const tituloErroLembrete = ref('Erro') // Título do alerta de erro do Lembrete
 const mensagemSucessoLembrete = ref('') // Mensagem do alerta de sucesso do Lembrete
 const modalDeixarMonitorar = ref({ show: false, processo: null }) // Estado do modal de deixar de monitorar
-let searchTimeout = null
 
 // Computed para filtrar processos
 const processosMonitorados = computed(() => {
-  return processos.value.filter(processo => !processo.arquivado)
+  let processosFiltrados = processos.value.filter(processo => !processo.arquivado)
+  
+  // Aplicar filtro de pesquisa se houver searchTerm
+  if (props.searchTerm && props.searchTerm.trim()) {
+    const termoPesquisa = props.searchTerm.toLowerCase().trim()
+    processosFiltrados = processosFiltrados.filter(processo => {
+      return (
+        processo.cnpj?.toLowerCase().includes(termoPesquisa) ||
+        processo.autor?.toLowerCase().includes(termoPesquisa) ||
+        processo.reu?.toLowerCase().includes(termoPesquisa) ||
+        processo.tribunal?.toLowerCase().includes(termoPesquisa) ||
+        processo.area?.toLowerCase().includes(termoPesquisa) ||
+        processo.assunto?.toLowerCase().includes(termoPesquisa) ||
+        processo.classe?.toLowerCase().includes(termoPesquisa) ||
+        processo.orgao_julgador?.toLowerCase().includes(termoPesquisa)
+      )
+    })
+  }
+  
+  return processosFiltrados
 })
 
 const processosNaoMonitorados = computed(() => {
-  return processos.value.filter(processo => processo.arquivado)
+  let processosFiltrados = processos.value.filter(processo => processo.arquivado)
+  
+  // Aplicar filtro de pesquisa se houver searchTerm
+  if (props.searchTerm && props.searchTerm.trim()) {
+    const termoPesquisa = props.searchTerm.toLowerCase().trim()
+    processosFiltrados = processosFiltrados.filter(processo => {
+      return (
+        processo.cnpj?.toLowerCase().includes(termoPesquisa) ||
+        processo.autor?.toLowerCase().includes(termoPesquisa) ||
+        processo.reu?.toLowerCase().includes(termoPesquisa) ||
+        processo.tribunal?.toLowerCase().includes(termoPesquisa) ||
+        processo.area?.toLowerCase().includes(termoPesquisa) ||
+        processo.assunto?.toLowerCase().includes(termoPesquisa) ||
+        processo.classe?.toLowerCase().includes(termoPesquisa) ||
+        processo.orgao_julgador?.toLowerCase().includes(termoPesquisa)
+      )
+    })
+  }
+  
+  return processosFiltrados
 })
 
 const processosFiltrados = computed(() => {
@@ -1161,24 +1198,14 @@ const handleMarcarAgenda = async (processoId, event) => {
   }
 }
 
-// Watcher para recarregar dados quando pesquisa mudar (com debounce)
-watch(() => props.searchTerm, (newSearchTerm) => {
-  paginaAtual.value = 1
-  
-  // Limpar timeout anterior
-  if (searchTimeout) {
-    clearTimeout(searchTimeout)
-  }
-  
-  // Definir novo timeout para debounce
-  searchTimeout = setTimeout(() => {
-    carregarProcessos({ termo: newSearchTerm })
-  }, 300)
+// Watcher para resetar paginação quando pesquisa mudar
+watch(() => props.searchTerm, () => {
+  paginaAtual.value = 1 // Reset para primeira página quando pesquisa mudar
 })
 
 onMounted(async () => {
   await carregarLimitePlano()
-  await carregarProcessos({ termo: props.searchTerm })
+  await carregarProcessos()
 })
 </script>
 

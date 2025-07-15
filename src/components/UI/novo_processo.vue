@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { supabase } from '../../lib/supabase.js'
+import AlertaErro from './AlertaErro.vue'
 
 const props = defineProps({
   visible: {
@@ -14,6 +15,11 @@ const emit = defineEmits(['fechar', 'buscar', 'processo-encontrado'])
 const numeroProcesso = ref('')
 const loading = ref(false)
 const error = ref('')
+
+// Estados para o alerta de erro
+const mostrarAlertaErro = ref(false)
+const tituloAlertaErro = ref('')
+const mensagemAlertaErro = ref('')
 
 // Aplicar máscara do número do processo
 const aplicarMascara = (valor) => {
@@ -72,7 +78,7 @@ const buscarProcesso = async () => {
     // Remove formatação apenas para enviar para a API
     const apenasNumeros = numeroProcesso.value.replace(/\D/g, '')
     
-    console.log('Buscando processo:', valorComMascara, 'números:', apenasNumeros)
+    console.log('Verificando se processo já existe:', valorComMascara, 'números:', apenasNumeros)
 
     // Obter JWT do usuário autenticado
     const { data: { session } } = await supabase.auth.getSession()
@@ -81,34 +87,74 @@ const buscarProcesso = async () => {
       throw new Error('Usuário não autenticado')
     }
 
-    console.log('JWT obtido para busca de processo')
+    console.log('JWT obtido, verificando processo existente...')
 
-    // Fazer chamada para a Edge Function do Supabase
-    const edgeFunctionUrl = 'https://zdfrfzgnhdnhgmihmrfo.supabase.co/functions/v1/buscar-processo'
+    // VERIFICAR SE O PROCESSO JÁ EXISTE NO BANCO
+    console.log('🔍 Verificando processo com CNPJ:', numeroProcesso.value)
+    console.log('🔍 UUID do usuário:', session.user.id)
     
-    const response = await fetch(edgeFunctionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({
-        numeroProcesso: apenasNumeros // Envia apenas números para a API
-      }),
+    const { data: processoExistente, error: erroVerificacao } = await supabase
+      .from('processos')
+      .select('id, cnpj, uuid')
+      .eq('cnpj', numeroProcesso.value)
+      .eq('uuid', session.user.id)
+      .single()
+
+    console.log('📊 Resultado da verificação:', {
+      processoExistente,
+      erroVerificacao,
+      codigoErro: erroVerificacao?.code
     })
 
-    console.log('Resposta da Edge Function:', response.status, response.statusText)
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || 'Erro ao buscar processo')
+    if (erroVerificacao && erroVerificacao.code !== 'PGRST116') {
+      // PGRST116 significa "nenhum resultado encontrado", que é o que queremos
+      console.error('❌ Erro na verificação:', erroVerificacao)
+      error.value = 'Erro ao verificar processo no banco de dados'
+      loading.value = false
+      return
     }
 
-    const resultado = await response.json()
-    console.log('Resultado da busca:', resultado)
+    if (processoExistente) {
+      console.log('❌ PROCESSO JÁ EXISTE!')
+      console.log('📋 Detalhes do processo existente:', {
+        id: processoExistente.id,
+        cnpj: processoExistente.cnpj,
+        uuid: processoExistente.uuid
+      })
+      
+      // Fechar o modal primeiro
+      emit('fechar')
+      
+      // Aguardar um pouco para garantir que o modal foi fechado
+      setTimeout(() => {
+        // Mostrar alerta de erro
+        tituloAlertaErro.value = 'Processo já cadastrado'
+        mensagemAlertaErro.value = 'Só é possível cadastrar uma vez. O número de processo já se encontra cadastrado no sistema.'
+        mostrarAlertaErro.value = true
+      }, 100)
+      
+      loading.value = false
+      return
+    }
+
+    console.log('✅ Processo não existe no banco, prosseguindo com busca na API...')
+
+    // Fazer a chamada para a Edge Function
+    console.log('🔍 Fazendo busca na API do Escavador...')
+    const { data, error: functionError } = await supabase.functions.invoke('buscar-processo', {
+      body: { numeroProcesso: apenasNumeros }
+    })
+
+    console.log('Resposta da Edge Function:', data ? 'Sucesso' : 'Erro', functionError)
+
+    if (functionError) {
+      throw new Error(functionError.message || 'Erro ao buscar processo')
+    }
+
+    console.log('Resultado da busca:', data)
 
     // Emitir evento com valor formatado (com máscara) para ser exibido no filtro
-    emit('buscar', valorComMascara)
+    emit('buscar', numeroProcesso.value)
     
     // Fechar modal após busca bem-sucedida
     setTimeout(() => {
@@ -145,6 +191,13 @@ const handleKeyPress = (event) => {
   if (event.key === 'Enter') {
     buscarProcesso()
   }
+}
+
+// Função para fechar o alerta de erro
+const fecharAlertaErro = () => {
+  mostrarAlertaErro.value = false
+  tituloAlertaErro.value = ''
+  mensagemAlertaErro.value = ''
 }
 </script>
 
@@ -204,6 +257,14 @@ const handleKeyPress = (event) => {
       </button>
     </div>
   </div>
+
+  <!-- Alerta de erro -->
+  <AlertaErro
+    v-if="mostrarAlertaErro"
+    :titulo="tituloAlertaErro"
+    :mensagem="mensagemAlertaErro"
+    @fechar="fecharAlertaErro"
+  />
 </template>
 
 <style scoped>
@@ -433,4 +494,4 @@ const handleKeyPress = (event) => {
     font-size: 13px;
   }
 }
-</style> 
+</style>

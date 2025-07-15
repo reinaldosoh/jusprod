@@ -82,7 +82,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['buscar', 'novo-relatorio', 'criar-relatorio', 'carregar-relatorio', 'relatorio-criado', 'erro'])
+const emit = defineEmits(['buscar', 'novo-relatorio', 'criar-relatorio', 'carregar-relatorio', 'relatorio-criado', 'erro', 'criar-relatorio-despesas-ativas'])
 
 const termoBusca = ref('')
 const mostrarTiposArquivo = ref(false)
@@ -110,7 +110,8 @@ const limparBusca = () => {
 // Função para criar documento de relatório
 const criarDocumento = () => {
   console.log('Criar documento de relatório')
-  emit('criar-relatorio', { tipo: 'documento' })
+  // Emitir evento específico para relatório de despesas ativas
+  emit('criar-relatorio-despesas-ativas')
   fecharDropdown()
 }
 

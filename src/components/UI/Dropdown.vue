@@ -34,7 +34,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['option-selected']);
+const emit = defineEmits(['option-selected', 'dropdown-open', 'dropdown-close']);
 
 const isOpen = ref(false);
 const selectedOption = ref(
@@ -47,6 +47,12 @@ const selectedOption = ref(
 function toggleDropdown() {
   if (props.disabled) return;
   isOpen.value = !isOpen.value;
+  
+  if (isOpen.value) {
+    emit('dropdown-open');
+  } else {
+    emit('dropdown-close');
+  }
 }
 
 function selectOption(option) {
@@ -54,11 +60,15 @@ function selectOption(option) {
   selectedOption.value = option;
   isOpen.value = false;
   emit('option-selected', option);
+  emit('dropdown-close');
 }
 
 function closeDropdown(e) {
   if (!e.target.closest('.dropdown-container')) {
-    isOpen.value = false;
+    if (isOpen.value) {
+      isOpen.value = false;
+      emit('dropdown-close');
+    }
   }
 }
 

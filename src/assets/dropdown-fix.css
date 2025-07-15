@@ -152,6 +152,80 @@
 .dropdown-options {
   z-index: 1001 !important;
   position: absolute !important;
+  top: 100% !important;
+  left: 0 !important;
+  width: 100% !important;
+  background: white !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  border-radius: 6px !important;
+  border: 1px solid #E5E7EB !important;
+}
+
+/* LISTA DE CLIENTES - DROPDOWNS ESPECÍFICOS */
+.lista-clientes .cliente-item .processo-dropdown .dropdown-container {
+  z-index: 2000 !important;
+  position: relative !important;
+}
+
+.lista-clientes .cliente-item .processo-dropdown .dropdown-options {
+  z-index: 2001 !important;
+  position: absolute !important;
+  top: 100% !important;
+  left: 0 !important;
+  width: 100% !important;
+  background: white !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  border-radius: 6px !important;
+  border: 1px solid #E5E7EB !important;
+}
+
+/* LISTA DE CLIENTES - QUANDO DROPDOWN ESTÁ ABERTO */
+.lista-clientes .cliente-item.dropdown-open {
+  z-index: 9999 !important;
+  position: relative !important;
+  background-color: #F9FAFB !important;
+}
+
+.lista-clientes .cliente-item.dropdown-open .processo-dropdown .dropdown-container {
+  z-index: 99999 !important;
+}
+
+.lista-clientes .cliente-item.dropdown-open .processo-dropdown .dropdown-options {
+  z-index: 999999 !important;
+}
+
+/* FORÇA ABSOLUTA PARA QUALQUER DROPDOWN EM LISTA DE CLIENTES */
+.lista-clientes .dropdown-options {
+  z-index: 999999 !important;
+  position: absolute !important;
+  background: white !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid #0468FA !important;
+  border-radius: 8px !important;
+}
+
+.lista-clientes .dropdown-container:hover .dropdown-options,
+.lista-clientes .dropdown-container:focus-within .dropdown-options,
+.lista-clientes .dropdown-container.dropdown-open .dropdown-options {
+  z-index: 9999999 !important;
+}
+
+/* VERSÃO MOBILE DA LISTA DE CLIENTES */
+.lista-clientes .mobile-card .processo-dropdown-mobile .dropdown-container {
+  z-index: 2500 !important;
+  position: relative !important;
+}
+
+.lista-clientes .mobile-card .processo-dropdown-mobile .dropdown-options {
+  z-index: 2501 !important;
+  position: absolute !important;
+  top: 100% !important;
+  left: 0 !important;
+  width: 100% !important;
+  background: white !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  border-radius: 6px !important;
+  border: 1px solid #E5E7EB !important;
 }
 
 /* 7. DROPDOWNS ESPECÍFICOS PARA OUTRAS PÁGINAS */
